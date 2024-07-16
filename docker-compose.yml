@@ -1,0 +1,27 @@
+   
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    command: ["postgres",
+              "-c", "log_statement=all",
+              "-c", "logging_collector=on",
+              "-c", "log_filename=postgresql.log",
+              "-c", "log_directory=/tmp",
+              "-c", "wal_level=logical"]
+  django:
+    build: .
+    container_name: django
+    volumes:
+      - .:/app:z
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    command: sleep infinity
+
