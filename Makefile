@@ -22,3 +22,5 @@ migrate:
 lint:
 	docker compose exec -it django black django_taskq/*py django_taskq/management/commands/*py
 	docker compose exec -it django isort django_taskq/*py django_taskq/management/commands/*py
+	docker compose exec -it django black django_taskq/*pyi
+	docker compose exec -it django isort django_taskq/*pyi

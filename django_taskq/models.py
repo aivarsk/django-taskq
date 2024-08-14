@@ -137,7 +137,7 @@ class PendingTaskManager(models.Manager):
 class PendingTask(Task):
     objects = PendingTaskManager()
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
 
 
@@ -154,7 +154,7 @@ class FutureTaskManager(models.Manager):
 class FutureTask(Task):
     objects = FutureTaskManager()
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
 
 
@@ -173,7 +173,7 @@ class ActiveTaskManager(models.Manager):
 class ActiveTask(Task):
     objects = ActiveTaskManager()
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
 
 
@@ -192,7 +192,7 @@ class DirtyTaskManager(models.Manager):
 class DirtyTask(Task):
     objects = DirtyTaskManager()
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
 
 
@@ -204,5 +204,5 @@ class FailedTaskManager(models.Manager):
 class FailedTask(Task):
     objects = FailedTaskManager()
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True

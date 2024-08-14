@@ -1,33 +1,36 @@
 import datetime
 import inspect
 from functools import wraps
-from typing import Union
+from typing import Callable
 
 from django.conf import settings
 from django.utils import timezone
 
 from django_taskq.models import Retry, Task
 
-__all__ = ["shared_task", "Ignore", "Retry"]
+__all__ = ["shared_task", "Retry"]
 
 
 def _apply_async(
-    func,
-    args: tuple = None,
-    kwargs: dict = None,
-    countdown: float = None,
-    eta: datetime.datetime = None,
-    expires: Union[float, datetime.datetime] = None,
-    queue: str = None,
+    func: Callable,
+    args: tuple | None = None,
+    kwargs: dict | None = None,
+    countdown: float | None = None,
+    eta: datetime.datetime | None = None,
+    expires: float | datetime.datetime | None = None,
+    queue: str | None = None,
 ):
     if countdown:
         eta = timezone.now() + timezone.timedelta(seconds=int(countdown))
     if expires and isinstance(expires, (int, float)):
         expires = timezone.now() + timezone.timedelta(seconds=int(expires))
 
+    module = inspect.getmodule(func)
+    assert module != None
+    funcstr = ".".join((module.__name__, func.__name__))
     task = Task(
         queue=queue or Task.DEFAULTQ,
-        func=".".join((inspect.getmodule(func).__name__, func.__name__)),
+        func=funcstr,
         args=args or (),
         kwargs=kwargs or {},
         execute_at=eta,
@@ -37,19 +40,6 @@ def _apply_async(
         task.execute()
     else:
         task.save()
-
-
-def _retry(
-    args=None,
-    kwargs=None,
-    exc=None,
-    throw=True,
-    eta=None,
-    countdown=None,
-    max_retries=None,
-    **options
-):
-    pass
 
 
 class Signature:

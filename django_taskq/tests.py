@@ -20,8 +20,8 @@ class TaskTestCase(TestCase):
 
 
 @shared_task
-def dummy(a, *, b=None):
-    pass
+def dummy(a, b=None):
+    del a, b
 
 
 @shared_task
