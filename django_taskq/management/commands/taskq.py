@@ -1,3 +1,4 @@
+import signal
 import threading
 import time
 
@@ -34,21 +35,30 @@ class Heartbeat(threading.Thread):
 class Command(BaseCommand):
     help = "Process tasks from a queue specified by -Q or 'default'"
     task_id = None
+    keep_running = True
 
     def add_arguments(self, parser):
         parser.add_argument("-Q", action="store", dest="queue_name", help="Queue name")
 
+    def stop(self, *args):
+        self.keep_running = False
+
     def handle(self, *_, **options):
+        signal.signal(signal.SIGINT, self.stop)
+        signal.signal(signal.SIGTERM, self.stop)
+
         heartbeat = Heartbeat(self)
         heartbeat.start()
         try:
-            while True:
+            while self.keep_running:
                 task = Task.next_task(queue=options.get("queue_name"))
                 if not task:
                     self.stdout.write(self.style.SUCCESS("No new tasks"))
                     time.sleep(1)
                 else:
                     self._execute_one(task)
+
+            self.stdout.write(self.style.SUCCESS("Signal received, stopped"))
         finally:
             heartbeat.cancel()
 
