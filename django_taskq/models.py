@@ -76,7 +76,7 @@ class Task(models.Model):
 
     @classmethod
     def alive(cls, task_id):
-        cls.obects.filter(pk=task_id).update(alive_at=timezone.now())
+        cls.objects.filter(pk=task_id).update(alive_at=timezone.now())
 
     def fail(self, exc):
         self.started = False
