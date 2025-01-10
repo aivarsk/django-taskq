@@ -3,7 +3,7 @@ Django database task queue
 Django Transaction Task Queue
 =============================
 
-A short and simple Celery replacement for my Django projects.
+A short, simple and reliable Celery replacement for my Django projects.
 
 * *Database is the only backend.* The task is a simple Django model, it uses the same transaction and connection as other models. No more ``transaction.on_commit`` hooks to schedule tasks.
 * *Tasks do not produce any results*, there is no ``get`` or ``join`` and there is no "result backend".  This is not a distrubuted await. If you need to store results, pass a unique key into the task and store the result in some DIY model.
@@ -42,15 +42,45 @@ Internals
 Adding a new task to the queue is just creating a new instance of the Task model.
 
 Executing a task is a bit more expensive:
+
 # A task is picked up from a queue and the state is updated to "started" within a single transaction.
 # Python code is executed, a background thread updates "alive at" field every second ("a liveness probe").
 # Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).
 
 This is a bit more expensive than necessary but:
+
 * we can recognize running tasks - the task is "started" and the record is updated in the last couple seconds.
 * we can recognize "dirty" tasks that got killed or lost database connection in the middle - the task is "started" and the record has not been updated for a while.
 
 In an ideal world tasks should be idempotent but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
+
+
+Recipes
+-------
+
+*Exactly once, at most once, at least once, idempotency:*
+
+Implementing these semantics presents too many design questions to answer *on the task level*. Instead, treat the tasks as function calls that are decoupled in time. We do not enforce these sematics on functions, we write code inside functions to perform the necessary checks.
+
+Instead within the task do this:
+
+# Lock the application model
+# Check that all conditions still apply
+# Perform the action
+
+
+*Storing results:*
+
+Instead of the task storing it's results and returning that to the caller or trigerring another task to process it either:
+
+- Store the result directly in the target application model
+- Call a function or another task to process the result **explicitly**
+
+*Scheduling tasks:*
+
+Call a Python script from the Unix crontab. Use Kubernetes CronJobs.
+
+Do that every minute and check conditions in the code: maybe instead of UTC clock you have to follow the business day calendar or multiple time zones.
 
 Performance
 -----------
