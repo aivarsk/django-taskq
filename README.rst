@@ -43,9 +43,9 @@ Adding a new task to the queue is just creating a new instance of the Task model
 
 Executing a task is a bit more expensive:
 
-# A task is picked up from a queue and the state is updated to "started" within a single transaction.
-# Python code is executed, a background thread updates "alive at" field every second ("a liveness probe").
-# Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).
+1. A task is picked up from a queue and the state is updated to "started" within a single transaction.
+2. Python code is executed, a background thread updates "alive at" field every second ("a liveness probe").
+3. Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).
 
 This is a bit more expensive than necessary but:
 
@@ -64,9 +64,9 @@ Implementing these semantics presents too many design questions to answer *on th
 
 Instead within the task do this:
 
-# Lock the application model
-# Check that all conditions still apply
-# Perform the action
+1. Lock the application model
+2. Check that all conditions still apply
+3. Perform the action
 
 
 *Storing results:*
