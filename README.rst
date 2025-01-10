@@ -54,6 +54,11 @@ This is a bit more expensive than necessary but:
 
 In an ideal world tasks should be idempotent but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
 
+Performance
+-----------
+
+A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness and observability are more important.
+On the other hand, to handle more "tasks" you probably want to store many events not tasks and have a single task that processes them in batches.
 
 Recipes
 -------
@@ -82,8 +87,8 @@ Call a Python script from the Unix crontab. Use Kubernetes CronJobs.
 
 Do that every minute and check conditions in the code: maybe instead of UTC clock you have to follow the business day calendar or multiple time zones.
 
-Performance
------------
+*Boosting performance:*
 
-A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness and observability are more important.
-On the other hand, to handle more "tasks" you probably want to store many events not tasks and have a single task that processes them in batches.
+Instead of executing thousands of tasks (function calls with specific arguments) consider recording thousands of events (domain-specific model) and executing a task once in a while that processes all available events in bulk.
+
+Or do not record any events, just schedule a task that queries models matching certain criteria and doing processing for all of them.
