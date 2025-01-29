@@ -36,6 +36,11 @@ def retry_task():
 
 @shared_task
 def self_retry_task():
+    do_self_retry_because_pyright_does_not_see_retry()
+
+
+def do_self_retry_because_pyright_does_not_see_retry():
+    # Does not see retry in the annotated function itself
     self_retry_task.retry()
 
 

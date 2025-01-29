@@ -28,18 +28,25 @@ def _apply_async(
     module = inspect.getmodule(func)
     assert module != None
     funcstr = ".".join((module.__name__, func.__name__))
+
     task = Task(
-        queue=queue or Task.DEFAULTQ,
+        queue=queue,
         func=funcstr,
         args=args or (),
         kwargs=kwargs or {},
         execute_at=eta,
         expires_at=expires,
     )
+    task.save()
+
     if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
-        task.execute()
-    else:
-        task.save()
+        try:
+            task.execute()
+            task.delete()
+        except Retry as retry:
+            task.retry(retry)
+        except Exception as exc:
+            task.fail(exc)
 
 
 class Signature:
@@ -69,10 +76,12 @@ def _retry(exc=None, eta=None, countdown=None, max_retries=None):
     raise Retry(exc=exc, execute_at=eta, max_retries=max_retries)
 
 
-def _wrap_autoretry(func, **options):
-    autoretry_for = tuple(options.get("autoretry_for", ()))
-    dont_autoretry_for = tuple(options.get("dont_autoretry_for", ()))
-    retry_kwargs = options.get("retry_kwargs", {})
+def _maybe_wrap_autoretry(
+    func: Callable,
+    autoretry_for=(),
+    dont_autoretry_for=(),
+    retry_kwargs={},
+):
     max_retries = retry_kwargs.get("max_retries", 3)
     countdown = retry_kwargs.get("countdown", 3 * 60)
     eta = timezone.now() + timezone.timedelta(seconds=int(countdown))
@@ -104,7 +113,7 @@ def shared_task(*args, **kwargs):
             )
             func.s = lambda *args, **kwargs: Signature(func, args, kwargs)
             func.retry = lambda *args, **kwargs: _retry(*args, **kwargs)
-            return _wrap_autoretry(func, **options)
+            return _maybe_wrap_autoretry(func, **options)
 
         return run
 

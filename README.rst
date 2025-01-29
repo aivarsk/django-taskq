@@ -1,20 +1,19 @@
-Django database task queue
-
 Django Transaction Task Queue
 =============================
 
-A short, simple and reliable Celery replacement for my Django projects.
+A short, simple, boring and reliable Celery replacement for my Django projects.
 
 * *Database is the only backend.* The task is a simple Django model, it uses the same transaction and connection as other models. No more ``transaction.on_commit`` hooks to schedule tasks.
+* *ETA (estimated time of arrival) is a first-class citizen.* It does not depend on whether backends support the feature or not.
+* *Django admin for monitoring.* You can view pending tasks, future, failed, and "dirty" (crashed in the middle of work).
+* *Dead letter queue* built in. You get access to failed tasks and can retry them from Django admin.
 * *Tasks do not produce any results*, there is no ``get`` or ``join`` and there is no "result backend".  This is not a distrubuted await. If you need to store results, pass a unique key into the task and store the result in some DIY model.
 * *No workflows and chaining of jobs.*
-* *ETA (estimated time of arrival) is a first-class citizen.* It does not depend on whether backends support the feature or not.
 * *The worker is a single-threaded process*, you start several of those to scale. I have seen too many issues with autoscaling workers, worker processes killed by OS, workers stuck: simple is better.
 * *No prefetching or visibility timeouts*. The worker picks the first available task and processes it.
-* *Dead letter queue* built in. You get access to failed tasks and can retry them from Django admin.
-* *Django admin for monitoring.* You can view pending tasks, future, failed, and "dirty" (crashed in the middle of work).
 * *Easy to get the metrics* from Django shell and export to your favorite monitoring tool
 * *Task records are removed after successful execution*. Unlike Celery SQLAlchemy's backend, records are removed so you don't have to care about archiving. It also keeps the table small, properly indexed and efficient.
+* *Failed tasks are kept in the database*. A human decision is required to remove them. If not, wrap your task in "catch all exceptions" block.
 
 Celery API
 ----------
@@ -67,12 +66,11 @@ Recipes
 
 Implementing these semantics presents too many design questions to answer *on the task level*. Instead, treat the tasks as function calls that are decoupled in time. We do not enforce these sematics on functions, we write code inside functions to perform the necessary checks.
 
-Instead within the task do this:
+Within the task do this:
 
 1. Lock the application model
 2. Check that all conditions still apply
 3. Perform the action
-
 
 *Storing results:*
 
@@ -86,6 +84,10 @@ Instead of the task storing it's results and returning that to the caller or tri
 Call a Python script from the Unix crontab. Use Kubernetes CronJobs.
 
 Do that every minute and check conditions in the code: maybe instead of UTC clock you have to follow the business day calendar or multiple time zones.
+
+*Scaling workers:*
+
+Start multiple Docker containers, start multiple Kubernetes pods/scale deployment. Or use something like supervisord to start multiple processes.
 
 *Boosting performance:*
 

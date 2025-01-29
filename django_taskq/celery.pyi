@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, Callable, Generic, ParamSpec, TypeVar, overload
 
 _P = ParamSpec("_P")
@@ -13,7 +14,12 @@ class _shared_task(Generic[_P, _R]):
         args: tuple[Any, ...] | None = ..., kwargs: dict[str, Any] | None = ...
     ): ...
     @staticmethod
-    def retry(): ...
+    def retry(
+        exc: Exception | None = ...,
+        eta: datetime.datetime | None = ...,
+        countdown: float | None = ...,
+        max_retries: int | None = ...,
+    ): ...
 
 @overload
 def shared_task(func: Callable[_P, _R]) -> _shared_task[_P, _R]: ...
@@ -21,7 +27,7 @@ def shared_task(func: Callable[_P, _R]) -> _shared_task[_P, _R]: ...
 def shared_task(
     *,
     queue: str = ...,
-    autoretry_for: tuple[type[BaseException]] = ...,
-    dont_autoretry_for: tuple[type[BaseException]] = ...,
+    autoretry_for: tuple[type[BaseException], ...] = ...,
+    dont_autoretry_for: tuple[type[BaseException], ...] = ...,
     retry_kwargs: dict[str, Any] = ...,
 ) -> Callable[[Callable[_P, _R]], _shared_task[_P, _R]]: ...

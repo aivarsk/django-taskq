@@ -41,42 +41,15 @@ class Task(models.Model):
     started = models.BooleanField(default=False, editable=False)
     failed = models.BooleanField(default=False, editable=False)
 
-    def save(self, *args, **kwargs):
+    def _make_repr(self):
         strargs = [str(arg) for arg in self.args]
         strargs += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
-        self.repr = f"{self.func}({', '.join(strargs)})"
+        return f"{self.func}({', '.join(strargs)})"
+
+    def save(self, *args, **kwargs):
+        self.queue = self.queue or self.DEFAULTQ
+        self.repr = self._make_repr()
         super().save(*args, **kwargs)
-
-    @classmethod
-    def next_task(cls, queue=None):
-        queue = queue or "default"
-        while True:
-            with transaction.atomic():
-                task = (
-                    cls.objects.select_for_update(skip_locked=True)
-                    .filter(
-                        failed=False,
-                        started=False,
-                        execute_at__lte=timezone.now(),
-                        queue=queue,
-                    )
-                    .order_by("execute_at")
-                    .first()
-                )
-                if not task:
-                    return task
-
-                if task.expires_at and task.expires_at <= timezone.now():
-                    task.delete()
-                else:
-                    task.started = True
-                    task.alive_at = timezone.now()
-                    task.save(update_fields=["started", "alive_at"])
-                    return task
-
-    @classmethod
-    def alive(cls, task_id):
-        cls.objects.filter(pk=task_id).update(alive_at=timezone.now())
 
     def fail(self, exc):
         self.started = False
@@ -85,7 +58,6 @@ class Task(models.Model):
         self.save(update_fields=["started", "failed", "traceback"])
 
     def retry(self, retry_info: Retry):
-
         self.retries += 1
         if retry_info.max_retries is not None and self.retries > retry_info.max_retries:
             if retry_info.exc:
@@ -113,6 +85,37 @@ class Task(models.Model):
 
         f = getattr(__import__(mod, fromlist=(func,)), func)
         f(*self.args, **self.kwargs)
+
+    @classmethod
+    def next_task(cls, queue=None):
+        queue = queue or cls.DEFAULTQ
+        while True:
+            with transaction.atomic():
+                task = (
+                    cls.objects.select_for_update(skip_locked=True)
+                    .filter(
+                        failed=False,
+                        started=False,
+                        execute_at__lte=timezone.now(),
+                        queue=queue,
+                    )
+                    .order_by("execute_at")
+                    .first()
+                )
+                if not task:
+                    return task
+
+                if task.expires_at and task.expires_at <= timezone.now():
+                    task.delete()
+                else:
+                    task.started = True
+                    task.alive_at = timezone.now()
+                    task.save(update_fields=["started", "alive_at"])
+                    return task
+
+    @classmethod
+    def alive(cls, task_id):
+        cls.objects.filter(pk=task_id).update(alive_at=timezone.now())
 
     class Meta:
         indexes = [

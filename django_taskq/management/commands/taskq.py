@@ -40,7 +40,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("-Q", action="store", dest="queue_name", help="Queue name")
 
-    def stop(self, *args):
+    def stop(self, *_):
         self.keep_running = False
 
     def handle(self, *_, **options):

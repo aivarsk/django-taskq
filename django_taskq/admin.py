@@ -1,7 +1,12 @@
 from django.contrib import admin, messages
 
-from django_taskq.models import (ActiveTask, DirtyTask, FailedTask, FutureTask,
-                                 PendingTask)
+from django_taskq.models import (
+    ActiveTask,
+    DirtyTask,
+    FailedTask,
+    FutureTask,
+    PendingTask,
+)
 
 
 @admin.register(PendingTask, ActiveTask, FutureTask)
