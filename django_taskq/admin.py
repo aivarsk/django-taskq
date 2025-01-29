@@ -27,7 +27,6 @@ class PendingTaskAdmin(admin.ModelAdmin):
         "func",
         ("execute_at", admin.DateFieldListFilter),
         ("created_at", admin.DateFieldListFilter),
-        ("started_at", admin.DateFieldListFilter),
     )
 
     def has_add_permission(self, request, obj=None):
