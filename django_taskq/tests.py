@@ -81,6 +81,16 @@ class CeleryInterfaceTestCase(TestCase):
         task = Task.objects.last()
         self.assertEqual(task.repr, "django_taskq.tests.dummy(1, 2)")
 
+    def test_shared_task_signature_apply_async_countdown(self):
+        now = timezone.now()
+        print(now)
+        dummy.s(1, 2).apply_async(countdown=10)
+
+        task = Task.objects.last()
+        self.assertEqual(task.repr, "django_taskq.tests.dummy(1, 2)")
+        self.assertGreaterEqual(task.execute_at - now, datetime.timedelta(seconds=10))
+
+
     def test_shared_task_fail(self):
         failing_task.delay()
 

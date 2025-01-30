@@ -31,7 +31,7 @@ class Task(models.Model):
     repr = models.CharField(max_length=512)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    execute_at = models.DateTimeField(auto_now_add=True)
+    execute_at = models.DateTimeField(editable=False)
     expires_at = models.DateTimeField(null=True, blank=True)
     alive_at = models.DateTimeField(null=True, blank=True, editable=False)
 
@@ -49,6 +49,8 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
         self.queue = self.queue or self.DEFAULTQ
         self.repr = self._make_repr()
+        if not self.execute_at:
+            self.execute_at = timezone.now()
         super().save(*args, **kwargs)
 
     def fail(self, exc):

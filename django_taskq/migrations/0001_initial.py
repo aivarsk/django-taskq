@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ("kwargs", picklefield.fields.PickledObjectField(editable=False)),
                 ("repr", models.CharField(max_length=512)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("execute_at", models.DateTimeField(auto_now_add=True)),
+                ("execute_at", models.DateTimeField(editable=False)),
                 ("expires_at", models.DateTimeField(blank=True, null=True)),
                 (
                     "alive_at",
