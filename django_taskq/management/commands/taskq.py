@@ -1,3 +1,4 @@
+import logging
 import signal
 import threading
 import time
@@ -39,11 +40,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("-Q", action="store", dest="queue_name", help="Queue name")
+        parser.add_argument("-l", action="store", dest="loglevel", help="Log level")
 
     def stop(self, *_):
         self.keep_running = False
 
     def handle(self, *_, **options):
+        try:
+            loglevel = getattr(logging, options.get("loglevel") or "INFO")
+        except AttributeError:
+            loglevel = logging.ERROR
+        logging.getLogger().setLevel(loglevel)
+
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)
 

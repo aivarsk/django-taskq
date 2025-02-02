@@ -62,6 +62,7 @@ class Task(models.Model):
     def retry(self, retry_info: Retry):
         self.retries += 1
         if retry_info.max_retries is not None and self.retries > retry_info.max_retries:
+            # TODO: maybe raise?
             if retry_info.exc:
                 self.fail(retry_info.exc)
             else:
@@ -79,6 +80,11 @@ class Task(models.Model):
             update_fields=["started", "failed", "traceback", "retries", "execute_at"]
         )
         return True
+
+    def force_retry(self):
+        return self.retry(
+            Retry(exc=None, execute_at=timezone.now(), max_retries=self.retries + 1)
+        )
 
     def execute(self):
         last_dot = self.func.rindex(".")

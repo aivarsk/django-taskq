@@ -59,6 +59,8 @@ class RestartableTaskAdmin(admin.ModelAdmin):
         "created_at",
         "alive_at",
         "traceback",
+        "args",
+        "kwargs",
     )
     list_filter = (
         "queue",
@@ -80,7 +82,7 @@ class RestartableTaskAdmin(admin.ModelAdmin):
         count = 0
         for task in queryset.iterator():
             count += 1
-            task.retry()
+            task.force_retry()
         self.message_user(
             request,
             f"{count} task(s) will be retried",

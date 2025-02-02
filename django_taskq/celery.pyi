@@ -11,7 +11,12 @@ class _shared_task(Generic[_P, _R]):
     def s(*args: _P.args, **kwargs: _P.kwargs): ...
     @staticmethod
     def apply_async(
-        args: tuple[Any, ...] | None = ..., kwargs: dict[str, Any] | None = ...
+        args: tuple[Any, ...] | None = ...,
+        kwargs: dict[str, Any] | None = ...,
+        eta: datetime.datetime | None = ...,
+        countdown: float | None = ...,
+        expires: float | datetime.datetime | None = ...,
+        queue: str | None = ...,
     ): ...
     @staticmethod
     def retry(

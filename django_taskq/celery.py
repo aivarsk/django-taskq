@@ -11,6 +11,12 @@ from django_taskq.models import Retry, Task
 __all__ = ["shared_task", "Retry"]
 
 
+def _funcstr(func: Callable):
+    module = inspect.getmodule(func)
+    assert module != None
+    return ".".join((module.__name__, func.__name__))
+
+
 def _apply_async(
     func: Callable,
     args: tuple | None = None,
@@ -25,13 +31,9 @@ def _apply_async(
     if expires and isinstance(expires, (int, float)):
         expires = timezone.now() + timezone.timedelta(seconds=int(expires))
 
-    module = inspect.getmodule(func)
-    assert module != None
-    funcstr = ".".join((module.__name__, func.__name__))
-
     task = Task(
         queue=queue,
-        func=funcstr,
+        func=_funcstr(func),
         args=args or (),
         kwargs=kwargs or {},
         execute_at=eta,
@@ -64,8 +66,7 @@ class Signature:
         _apply_async(self.func, self.args, self.kwargs, **self.options)
 
     def apply_async(self, **kwargs):
-        self.options.update(kwargs)
-        _apply_async(self.func, self.args, self.kwargs, **self.options)
+        _apply_async(self.func, self.args, self.kwargs, **(self.options | kwargs))
 
 
 def _retry(exc=None, eta=None, countdown=None, max_retries=None):
@@ -82,10 +83,6 @@ def _maybe_wrap_autoretry(
     dont_autoretry_for=(),
     retry_kwargs={},
 ):
-    max_retries = retry_kwargs.get("max_retries", 3)
-    countdown = retry_kwargs.get("countdown", 3 * 60)
-    eta = timezone.now() + timezone.timedelta(seconds=int(countdown))
-
     if autoretry_for:
 
         @wraps(func)
@@ -97,7 +94,11 @@ def _maybe_wrap_autoretry(
             except dont_autoretry_for:
                 raise
             except autoretry_for as exc:
-                raise Retry(exc=exc, execute_at=eta, max_retries=max_retries)
+                _retry(
+                    exc=exc,
+                    countdown=retry_kwargs.get("countdown"),
+                    max_retries=retry_kwargs.get("max_retries", 3),
+                )
 
         return run
 
@@ -107,11 +108,14 @@ def _maybe_wrap_autoretry(
 def shared_task(*args, **kwargs):
     def create_shared_task(**options):
         def run(func):
+            queue = options.pop("queue", None)
             func.delay = lambda *args, **kwargs: _apply_async(func, args, kwargs)
             func.apply_async = lambda *args, **kwargs: _apply_async(
-                func, *args, **kwargs
+                func, *args, **(dict(queue=queue) | kwargs)
             )
-            func.s = lambda *args, **kwargs: Signature(func, args, kwargs)
+            func.s = lambda *args, **kwargs: Signature(func, args, kwargs).set(
+                queue=queue
+            )
             func.retry = lambda *args, **kwargs: _retry(*args, **kwargs)
             return _maybe_wrap_autoretry(func, **options)
 
