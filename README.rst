@@ -1,19 +1,12 @@
-Django Transaction Task Queue
-=============================
+Django Task Queue
+=================
 
 A short, simple, boring and reliable Celery replacement for my Django projects.
 
-* *Database is the only backend.* The task is a simple Django model, it uses the same transaction and connection as other models. No more ``transaction.on_commit`` hooks to schedule tasks.
-* *ETA (estimated time of arrival) is a first-class citizen.* It does not depend on whether backends support the feature or not.
-* *Django admin for monitoring.* You can view pending tasks, future, failed, and "dirty" (crashed in the middle of work).
-* *Dead letter queue* built in. You get access to failed tasks and can retry them from Django admin.
-* *Tasks do not produce any results*, there is no ``get`` or ``join`` and there is no "result backend".  This is not a distrubuted await. If you need to store results, pass a unique key into the task and store the result in some DIY model.
-* *No workflows and chaining of jobs.*
-* *The worker is a single-threaded process*, you start several of those to scale. I have seen too many issues with autoscaling workers, worker processes killed by OS, workers stuck: simple is better.
-* *No prefetching or visibility timeouts*. The worker picks the first available task and processes it.
-* *Easy to get the metrics* from Django shell and export to your favorite monitoring tool
-* *Task records are removed after successful execution*. Unlike Celery SQLAlchemy's backend, records are removed so you don't have to care about archiving. It also keeps the table small, properly indexed and efficient.
-* *Failed tasks are kept in the database*. A human decision is required to remove them. If not, wrap your task in "catch all exceptions" block.
+* ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.
+* Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more ``transaction.on_commit``.
+* Django Admin integration to view future and failed tasks and to restart or delete the failed ones.
+* Tasks produce no result. When your task produces a valuable result, store it in your models.
 
 Celery API
 ----------
@@ -33,6 +26,37 @@ The main API is the Celery API (``shared_task``) with ``delay``, ``apply_async``
   my_task.delay(1,bar=2)
   my_task.appy_async((1,2))
   my_task.s(1,2).apply_async()
+
+
+To start a worker just running the management command:
+
+.. code-block:: bash
+
+   python manage.py taskq
+   python manage.py taskq -Q default -l DEBUG
+
+
+NOT Celery API
+--------------
+
+This task queue is unintrusive, all you get is the execution of a function. How you organize the code after that is up to you.
+There are no Celery bound tasks and task inheritance, naming, task requests, special logging, etc. You get the idea.
+
+Retry can't change the args/kwargs. That is not a retry but a new task.
+
+Tasks have no result. If you can wait for the result, you can execute the function directly.
+
+
+Admin page
+----------
+
+Django admin page shows tasks in following groups:
+
+- Failed tasks -- Tasks that failed after retries and countdowns. You should inspect them and remove by hand or with a script. You can execute them again as well.
+- Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed prcesses or crashing machines. Review then and either delete or execute again.
+- Active tasks -- Tasks being executed right now. You might catch some longer-running tasks here
+- Pending tasks -- Tasks that should be executed now but are not due to lack of available workers. You might start some extra ones to catch up.
+- Future tasks -- Tasks scheduled to be executed in the future.
 
 
 Internals
@@ -71,6 +95,12 @@ Within the task do this:
 1. Lock the application model
 2. Check that all conditions still apply
 3. Perform the action
+
+
+*Task priorities:*
+
+There are no priorities. If you need priority or slow background tasks, just add them to another queue. Start as many processors for the queues as you want.
+Some of them might be idle but it's under your control unlike trying to come up with a proper algorithm that prioritizes tasks and avoids starvation.
 
 *Storing results:*
 

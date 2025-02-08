@@ -28,6 +28,7 @@ def taskfunc(a, b=None):
 class CeleryInterfaceBasicCalls(TestCase):
     def _assert_last_task(self, r):
         task = Task.objects.last()
+        assert task is not None
         self.assertEqual(task.repr, r)
         self.assertAlmostEqual(
             task.execute_at, timezone.now(), delta=datetime.timedelta(seconds=1)
@@ -85,6 +86,7 @@ class CeleryInterfaceBasicCalls(TestCase):
 class CeleryInterfaceApplyAsync(TestCase):
     def _assert_last_task(self, eta, expires):
         task = Task.objects.last()
+        assert task is not None
         self.assertAlmostEqual(
             task.execute_at, eta, delta=datetime.timedelta(seconds=1)
         )
@@ -127,6 +129,7 @@ def taskfunc_queue(a, b=None):
 class CeleryInterfaceQueue(TestCase):
     def _assert_last_task(self, queue):
         task = Task.objects.last()
+        assert task is not None
         self.assertEqual(task.queue, queue)
 
     def test_shared_task_apply_async(self):
@@ -172,6 +175,7 @@ def task_with_raise_autoretry_KeyError_dont_ValueError(exc_type):
 class CeleryInterfaceAutoretry(TestCase):
     def _assert_task_raises(self, exc_type):
         task = Task.objects.last()
+        assert task is not None
         with self.assertRaises(exc_type):
             task.execute()
 
@@ -218,6 +222,7 @@ def do_self_retry_because_pyright_does_not_see_retry():
 class CeleryInterfaceManualRetry(TestCase):
     def _assert_task_retries(self, execute_at, max_retries):
         task = Task.objects.last()
+        assert task is not None
         with self.assertRaises(Retry) as exc_info:
             task.execute()
         retry = exc_info.exception
@@ -278,6 +283,7 @@ class RetryExecution(TestCase):
 
     def _test_a_retry(self, retry, retries, failed=False):
         task = Task.objects.last()
+        assert task is not None
         task.retry(retry)
         task.refresh_from_db()
         self.assertEqual(task.failed, failed)

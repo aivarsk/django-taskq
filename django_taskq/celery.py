@@ -27,9 +27,9 @@ def _apply_async(
     queue: str | None = None,
 ):
     if countdown:
-        eta = timezone.now() + timezone.timedelta(seconds=int(countdown))
+        eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
     if expires and isinstance(expires, (int, float)):
-        expires = timezone.now() + timezone.timedelta(seconds=int(expires))
+        expires = timezone.now() + datetime.timedelta(seconds=int(expires))
 
     task = Task(
         queue=queue,
@@ -73,7 +73,7 @@ def _retry(exc=None, eta=None, countdown=None, max_retries=None):
     if not eta:
         if countdown is None:
             countdown = 3 * 60
-        eta = timezone.now() + timezone.timedelta(seconds=int(countdown))
+        eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
     raise Retry(exc=exc, execute_at=eta, max_retries=max_retries)
 
 
