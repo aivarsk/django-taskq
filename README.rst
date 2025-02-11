@@ -12,6 +12,7 @@ Installation
 ------------
 
 .. code-block:: bash
+  
   python -m pip install django-taskq
 
 
