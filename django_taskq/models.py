@@ -96,20 +96,20 @@ class Task(models.Model):
 
     @classmethod
     def next_task(cls, queue=None):
-        queue = queue or cls.DEFAULTQ
         while True:
             with transaction.atomic():
-                task = (
+                taskqs = (
                     cls.objects.select_for_update(skip_locked=True)
                     .filter(
                         failed=False,
                         started=False,
                         execute_at__lte=timezone.now(),
-                        queue=queue,
                     )
-                    .order_by("execute_at")
-                    .first()
                 )
+                if queue:
+                    taskqs = taskqs.filter(queue=queue)
+
+                task = taskqs.order_by("execute_at").first()
                 if not task:
                     return task
 
