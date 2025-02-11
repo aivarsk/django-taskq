@@ -8,6 +8,23 @@ A short, simple, boring and reliable Celery replacement for my Django projects.
 * Django Admin integration to view future and failed tasks and to restart or delete the failed ones.
 * Tasks produce no result. When your task produces a valuable result, store it in your models.
 
+Installation
+------------
+
+.. code-block:: bash
+  python -m pip install django-taskq
+
+
+And add the ``django_taskq`` to the ``INSTALLED_APPS``:
+
+.. code-block:: python
+
+  INSTALLED_APPS = [
+      # ...
+      "django_taskq",
+  ]
+
+
 Celery API
 ----------
 
