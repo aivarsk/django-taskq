@@ -1,7 +1,7 @@
 Django Task Queue
 =================
 
-A short, simple, boring and reliable Celery replacement for my Django projects.
+A short, simple, boring, and reliable Celery replacement for my Django projects.
 
 * ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.
 * Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more ``transaction.on_commit``.
@@ -10,6 +10,8 @@ A short, simple, boring and reliable Celery replacement for my Django projects.
 
 Installation
 ------------
+
+Install the package:
 
 .. code-block:: bash
   
@@ -24,6 +26,12 @@ And add the ``django_taskq`` to the ``INSTALLED_APPS``:
       # ...
       "django_taskq",
   ]
+
+Run the migrations to create the database tables and indexes:
+
+.. code-block:: bash
+  
+  python manage.py migrate
 
 
 Celery API
@@ -68,10 +76,10 @@ Tasks have no result. If you can wait for the result, you can execute the functi
 Admin page
 ----------
 
-Django admin page shows tasks in following groups:
+The Django admin page shows tasks in the following groups:
 
-- Failed tasks -- Tasks that failed after retries and countdowns. You should inspect them and remove by hand or with a script. You can execute them again as well.
-- Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed prcesses or crashing machines. Review then and either delete or execute again.
+- Failed tasks -- Tasks that failed after retries and countdowns. You should inspect them and remove them by hand or with a script. You can execute them again as well.
+- Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed processes or crashing machines. Review then and either delete or execute again.
 - Active tasks -- Tasks being executed right now. You might catch some longer-running tasks here
 - Pending tasks -- Tasks that should be executed now but are not due to lack of available workers. You might start some extra ones to catch up.
 - Future tasks -- Tasks scheduled to be executed in the future.
@@ -80,33 +88,34 @@ Django admin page shows tasks in following groups:
 Internals
 ---------
 
-Adding a new task to the queue is just creating a new instance of the Task model.
+Adding a new task to the queue creates a new instance of the task model.
 
 Executing a task is a bit more expensive:
 
 1. A task is picked up from a queue and the state is updated to "started" within a single transaction.
-2. Python code is executed, a background thread updates "alive at" field every second ("a liveness probe").
+2. Python code is executed, and a background thread updates the "alive at" field every second ("a liveness probe").
 3. Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).
 
 This is a bit more expensive than necessary but:
 
-* we can recognize running tasks - the task is "started" and the record is updated in the last couple seconds.
+* we can recognize running tasks - the task is "started" and the record is updated in the last few seconds.
 * we can recognize "dirty" tasks that got killed or lost database connection in the middle - the task is "started" and the record has not been updated for a while.
 
-In an ideal world tasks should be idempotent but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
+In an ideal world, tasks should be idempotent but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
+
 
 Performance
 -----------
 
-A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness and observability are more important.
-On the other hand, to handle more "tasks" you probably want to store many events not tasks and have a single task that processes them in batches.
+A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness, and observability are more important.
+On the other hand, to handle more "tasks" you probably want to store many events not tasks, and have a single task that processes them in batches.
 
 Recipes
 -------
 
 *Exactly once, at most once, at least once, idempotency:*
 
-Implementing these semantics presents too many design questions to answer *on the task level*. Instead, treat the tasks as function calls that are decoupled in time. We do not enforce these sematics on functions, we write code inside functions to perform the necessary checks.
+Implementing these semantics presents too many design questions to answer *on the task level*. Instead, treat the tasks as function calls that are decoupled in time. We do not enforce these semantics on functions, we write code inside functions to perform the necessary checks.
 
 Within the task do this:
 
@@ -122,7 +131,7 @@ Some of them might be idle but it's under your control unlike trying to come up 
 
 *Storing results:*
 
-Instead of the task storing it's results and returning that to the caller or trigerring another task to process it either:
+Instead of the task storing its results and returning that to the caller or triggering another task to process it either:
 
 - Store the result directly in the target application model
 - Call a function or another task to process the result **explicitly**
@@ -131,14 +140,15 @@ Instead of the task storing it's results and returning that to the caller or tri
 
 Call a Python script from the Unix crontab. Use Kubernetes CronJobs.
 
-Do that every minute and check conditions in the code: maybe instead of UTC clock you have to follow the business day calendar or multiple time zones.
+Do that every minute and check conditions in the code: maybe instead of the UTC clock you have to follow the business day calendar or multiple time zones.
 
 *Scaling workers:*
 
-Start multiple Docker containers, start multiple Kubernetes pods/scale deployment. Or use something like supervisord to start multiple processes.
+Start multiple Docker containers, and start multiple Kubernetes pods/scale deployment. Or use something like ``supervisord`` to start multiple processes.
 
 *Boosting performance:*
 
 Instead of executing thousands of tasks (function calls with specific arguments) consider recording thousands of events (domain-specific model) and executing a task once in a while that processes all available events in bulk.
 
-Or do not record any events, just schedule a task that queries models matching certain criteria and doing processing for all of them.
+Or do not record any events, just schedule a task that queries models matching certain criteria and does processing for all of them.
+
