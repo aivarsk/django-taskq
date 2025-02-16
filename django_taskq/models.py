@@ -98,13 +98,10 @@ class Task(models.Model):
     def next_task(cls, queue=None):
         while True:
             with transaction.atomic():
-                taskqs = (
-                    cls.objects.select_for_update(skip_locked=True)
-                    .filter(
-                        failed=False,
-                        started=False,
-                        execute_at__lte=timezone.now(),
-                    )
+                taskqs = cls.objects.select_for_update(skip_locked=True).filter(
+                    failed=False,
+                    started=False,
+                    execute_at__lte=timezone.now(),
                 )
                 if queue:
                     taskqs = taskqs.filter(queue=queue)

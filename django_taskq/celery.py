@@ -82,6 +82,7 @@ def _maybe_wrap_autoretry(
     autoretry_for=(),
     dont_autoretry_for=(),
     retry_kwargs={},
+    default_retry_delay=3 * 60,
 ):
     if autoretry_for:
 
@@ -96,7 +97,7 @@ def _maybe_wrap_autoretry(
             except autoretry_for as exc:
                 _retry(
                     exc=exc,
-                    countdown=retry_kwargs.get("countdown"),
+                    countdown=retry_kwargs.get("countdown", default_retry_delay),
                     max_retries=retry_kwargs.get("max_retries", 3),
                 )
 

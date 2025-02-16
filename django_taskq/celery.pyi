@@ -35,4 +35,5 @@ def shared_task(
     autoretry_for: tuple[type[BaseException], ...] = ...,
     dont_autoretry_for: tuple[type[BaseException], ...] = ...,
     retry_kwargs: dict[str, Any] = ...,
+    default_retry_delay: float | None =...,
 ) -> Callable[[Callable[_P, _R]], _shared_task[_P, _R]]: ...
