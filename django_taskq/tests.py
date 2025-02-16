@@ -13,6 +13,10 @@ class TaskTestCase(TestCase):
         task = Task.objects.create(func="foo", args=(1, 2), kwargs={"a": 3, "b": 4})
         self.assertEqual(task.repr, "foo(1, 2, a=3, b=4)")
 
+    def test_repr_is_truncated(self):
+        task = Task.objects.create(func="foo", args=("x" * 512,), kwargs={})
+        self.assertEqual(task.repr, f"foo({'x' * 504}...)")
+
     def test_datetime_parameter_can_be_serialized(self):
         timestamp = datetime.datetime.now()
         task = Task.objects.create(func="foo", args=(timestamp,), kwargs={})

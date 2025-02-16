@@ -44,9 +44,20 @@ class Task(models.Model):
     def _make_repr(self):
         strargs = [str(arg) for arg in self.args]
         strargs += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
-        return f"{self.func}({', '.join(strargs)})"
+        argslen = 512 - len(self.func) - 2
+        argsrepr = ", ".join(strargs)
+        if len(argsrepr) > argslen:
+            argsrepr = argsrepr[: argslen - 3] + "..."
+        return f"{self.func}({argsrepr})"
 
     def save(self, *args, **kwargs):
+        if len(self.func) > 64:
+            raise ValueError("Queue name is too long")
+        if len(self.func) > 256:
+            raise ValueError("Function name is too long")
+
+        self.args = self.args or ()
+        self.kwargs = self.kwargs or {}
         self.queue = self.queue or self.DEFAULTQ
         self.repr = self._make_repr()
         if not self.execute_at:
