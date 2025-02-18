@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 
 from django_taskq.models import (
+    Task,
     ActiveTask,
     DirtyTask,
     FailedTask,
@@ -11,23 +12,15 @@ from django_taskq.models import (
 
 @admin.register(PendingTask, ActiveTask, FutureTask)
 class PendingTaskAdmin(admin.ModelAdmin):
-    fields = ("id", "execute_at", "queue", "repr", "created_at")
-    list_display = ("id", "execute_at", "queue", "func", "args", "kwargs")
-    readonly_fields = (
-        "id",
-        "execute_at",
-        "queue",
-        "func",
-        "args",
-        "kwargs",
-        "created_at",
-    )
+    list_display = ("id", "execute_at", "queue", "func", "args", "kwargs", "retries")
     list_filter = (
         "queue",
         "func",
         ("execute_at", admin.DateFieldListFilter),
         ("created_at", admin.DateFieldListFilter),
+        ("expires_at", admin.DateFieldListFilter),
     )
+    readonly_fields = [field.name for field in Task._meta.get_fields() if field.name not in ("started", "failed")]
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -37,45 +30,9 @@ class PendingTaskAdmin(admin.ModelAdmin):
 
 
 @admin.register(DirtyTask, FailedTask)
-class RestartableTaskAdmin(admin.ModelAdmin):
-    fields = (
-        "id",
-        "execute_at",
-        "queue",
-        "func",
-        "args",
-        "kwargs",
-        "retries",
-        "created_at",
-        "alive_at",
-        "traceback",
-    )
-    list_display = ("id", "execute_at", "queue", "repr", "retries")
-    readonly_fields = (
-        "id",
-        "execute_at",
-        "func",
-        "retries",
-        "created_at",
-        "alive_at",
-        "traceback",
-        "args",
-        "kwargs",
-    )
-    list_filter = (
-        "queue",
-        "func",
-        ("execute_at", admin.DateFieldListFilter),
-        ("created_at", admin.DateFieldListFilter),
-        ("alive_at", admin.DateFieldListFilter),
-    )
+class RestartableTaskAdmin(PendingTaskAdmin):
+    list_filter = PendingTaskAdmin.list_filter + (("alive_at", admin.DateFieldListFilter),)
     actions = ("force_retry",)
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return True
 
     @admin.action(description="Retry selected tasks")
     def force_retry(self, request, queryset):

@@ -71,7 +71,9 @@ class Command(BaseCommand):
             heartbeat.cancel()
 
     def _execute_one(self, task):
-        self.stdout.write(self.style.SUCCESS(f"Processing Task({task.pk}) {task.repr}"))
+        self.stdout.write(
+            self.style.SUCCESS(f"Processing Task({task.pk}) {task.repr()}")
+        )
 
         try:
             self.task_id = task.id

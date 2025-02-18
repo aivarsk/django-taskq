@@ -13,6 +13,11 @@ pgshell:
 bash:
 	docker compose exec -it django bash
 
+admin:
+	docker compose exec -it django python ./manage.py migrate
+	docker compose exec -it django python ./manage.py collectstatic --noinput
+	docker compose exec -it django python ./manage.py runserver 0.0.0.0:8000
+
 test:
 	docker compose exec -it django python ./manage.py test
 

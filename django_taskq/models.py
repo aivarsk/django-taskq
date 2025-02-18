@@ -28,7 +28,6 @@ class Task(models.Model):
     func = models.CharField(max_length=256)
     args = PickledObjectField()
     kwargs = PickledObjectField()
-    repr = models.CharField(max_length=512)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     execute_at = models.DateTimeField(editable=False)
@@ -41,13 +40,10 @@ class Task(models.Model):
     started = models.BooleanField(default=False, editable=False)
     failed = models.BooleanField(default=False, editable=False)
 
-    def _make_repr(self):
+    def repr(self):
         strargs = [str(arg) for arg in self.args]
         strargs += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
-        argslen = 512 - len(self.func) - 2
         argsrepr = ", ".join(strargs)
-        if len(argsrepr) > argslen:
-            argsrepr = argsrepr[: argslen - 3] + "..."
         return f"{self.func}({argsrepr})"
 
     def save(self, *args, **kwargs):
@@ -59,7 +55,6 @@ class Task(models.Model):
         self.args = self.args or ()
         self.kwargs = self.kwargs or {}
         self.queue = self.queue or self.DEFAULTQ
-        self.repr = self._make_repr()
         if not self.execute_at:
             self.execute_at = timezone.now()
         super().save(*args, **kwargs)
