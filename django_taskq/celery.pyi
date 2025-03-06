@@ -1,12 +1,14 @@
 import datetime
 from typing import Any, Callable, Generic, ParamSpec, TypeVar, overload
 
+from django_taskq.celery import AsyncResult, EagerResult
+
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 class _shared_task(Generic[_P, _R]):
     @staticmethod
-    def delay(*args: _P.args, **kwargs: _P.kwargs): ...
+    def delay(*args: _P.args, **kwargs: _P.kwargs) -> AsyncResult | EagerResult: ...
     @staticmethod
     def s(*args: _P.args, **kwargs: _P.kwargs): ...
     @staticmethod
@@ -17,7 +19,7 @@ class _shared_task(Generic[_P, _R]):
         countdown: float | None = ...,
         expires: float | datetime.datetime | None = ...,
         queue: str | None = ...,
-    ): ...
+    ) -> AsyncResult | EagerResult: ...
     @staticmethod
     def retry(
         exc: Exception | None = ...,

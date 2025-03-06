@@ -2,6 +2,7 @@ import datetime
 import logging
 from unittest import TestCase
 
+from django.test import override_settings
 from django.utils import timezone
 
 from django_taskq.celery import shared_task
@@ -24,6 +25,7 @@ class TaskTestCase(TestCase):
 @shared_task
 def taskfunc(a, b=None):
     del a, b
+    return 42
 
 
 class CeleryInterfaceBasicCalls(TestCase):
@@ -34,6 +36,9 @@ class CeleryInterfaceBasicCalls(TestCase):
         self.assertAlmostEqual(
             task.execute_at, timezone.now(), delta=datetime.timedelta(seconds=1)
         )
+
+    def test_task_has_a_name(self):
+        assert taskfunc.name.endswith("taskfunc")
 
     def test_shared_task_with_delay_args(self):
         taskfunc.delay(1, 2)
@@ -82,6 +87,26 @@ class CeleryInterfaceBasicCalls(TestCase):
     def test_shared_task_signature_apply_async_kwargs(self):
         taskfunc.s(a=1, b=2).apply_async()
         self._assert_last_task("django_taskq.tests.taskfunc(a=1, b=2)")
+
+
+class CeleryInterfaceBasicResult(TestCase):
+    def test_shared_task_with_delay_returns_id(self):
+        result = taskfunc.delay(1, 2)
+        assert result.id is not None
+        assert getattr(result, "result", None) is None
+        assert Task.objects.filter(pk=result.id.int).count() == 1
+
+    def test_shared_task_with_delay_can_be_cancelled(self):
+        result = taskfunc.delay(1, 2)
+        assert result.id is not None
+        result.revoke()
+        assert Task.objects.filter(pk=result.id.int).count() == 0
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_shared_task_with_delay_returns_eager_result(self):
+        result = taskfunc.delay(1, 2)
+        assert result.id is not None
+        assert result.result == 42
 
 
 class CeleryInterfaceApplyAsync(TestCase):
@@ -183,6 +208,16 @@ class CeleryInterfaceAutoretry(TestCase):
     def test_failing_with_exception(self):
         task_with_raise.delay(KeyError)
         self._assert_task_raises(KeyError)
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_failing_with_exception_eager(self):
+        task_with_raise.delay(KeyError)
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(CELERY_TASK_EAGER_PROPAGATES=True)
+    def test_failing_with_exception_eager_propagates(self):
+        with self.assertRaises(KeyError):
+            task_with_raise.delay(KeyError)
 
     def test_failing_and_autoretry(self):
         task_with_raise_autoretry_KeyError.delay(KeyError)

@@ -2,13 +2,33 @@ import datetime
 import inspect
 from functools import wraps
 from typing import Callable
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.utils import timezone
 
 from django_taskq.models import Retry, Task
 
-__all__ = ["shared_task", "Retry"]
+__all__ = ["shared_task", "Retry", "AsyncResult", "EagerResult"]
+
+
+class AsyncResult:
+    id: UUID
+
+    def __init__(self, id):
+        self.id = id
+
+    def revoke(self):
+        Task.objects.filter(pk=self.id.int).delete()
+
+
+class EagerResult:
+    id: UUID
+    result = None
+
+    def __init__(self, result):
+        self.id = uuid4()
+        self.result = result
 
 
 def _funcstr(func: Callable):
@@ -31,24 +51,26 @@ def _apply_async(
     if expires and isinstance(expires, (int, float)):
         expires = timezone.now() + datetime.timedelta(seconds=int(expires))
 
-    task = Task(
-        queue=queue,
-        func=_funcstr(func),
-        args=args or (),
-        kwargs=kwargs or {},
-        execute_at=eta,
-        expires_at=expires,
-    )
-    task.save()
+    args = args or ()
+    kwargs = kwargs or {}
 
     if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
         try:
-            task.execute()
-            task.delete()
-        except Retry as retry:
-            task.retry(retry)
-        except Exception as exc:
-            task.fail(exc)
+            return EagerResult(result=func(*args, **kwargs))
+        except:
+            if getattr(settings, "CELERY_TASK_EAGER_PROPAGATES", False):
+                raise
+    else:
+        task = Task(
+            queue=queue,
+            func=_funcstr(func),
+            args=args,
+            kwargs=kwargs,
+            execute_at=eta,
+            expires_at=expires,
+        )
+        task.save()
+        return AsyncResult(id=UUID(int=task.pk))
 
 
 class Signature:
@@ -110,6 +132,7 @@ def shared_task(*args, **kwargs):
     def create_shared_task(**options):
         def run(func):
             queue = options.pop("queue", None)
+            func.name = _funcstr(func)
             func.delay = lambda *args, **kwargs: _apply_async(func, args, kwargs)
             func.apply_async = lambda *args, **kwargs: _apply_async(
                 func, *args, **(dict(queue=queue) | kwargs)

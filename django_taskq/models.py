@@ -47,14 +47,16 @@ class Task(models.Model):
         return f"{self.func}({argsrepr})"
 
     def save(self, *args, **kwargs):
-        if len(self.func) > 64:
-            raise ValueError("Queue name is too long")
         if len(self.func) > 256:
             raise ValueError("Function name is too long")
 
         self.args = self.args or ()
         self.kwargs = self.kwargs or {}
+
         self.queue = self.queue or self.DEFAULTQ
+        if len(self.queue) > 64:
+            raise ValueError("Queue name is too long")
+
         if not self.execute_at:
             self.execute_at = timezone.now()
         super().save(*args, **kwargs)

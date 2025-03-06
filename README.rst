@@ -62,6 +62,19 @@ To start a worker just running the management command:
    python manage.py taskq -Q default -l DEBUG
 
 
+Tasks also return emulations of ``AyncResult`` and ``EagerResult``. The main motivation is to provide a UUID of the scheduled task and to be able to revoke it before execution.
+
+.. code-block:: python
+
+   result = my_task.s(1,2).apply_async(countdown=60)
+   ...
+   result.revoke()
+   #
+   result = my_task.s(1,2).apply_async(countdown=60)
+   store_task_id(result.id)
+   ...
+   AsyncResult(id=retrieve_task_id()).revoke()
+
 NOT Celery API
 --------------
 
@@ -109,6 +122,11 @@ Performance
 
 A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness, and observability are more important.
 On the other hand, to handle more "tasks" you probably want to store many events not tasks, and have a single task that processes them in batches.
+
+Known issues
+------------
+
+Tests checking for a specific query limit might fail because creating new tasks does queries as well.
 
 Recipes
 -------
