@@ -19,7 +19,11 @@ class AsyncResult:
         self.id = id
 
     def revoke(self):
-        Task.objects.filter(pk=self.id.int).delete()
+        Task.objects.filter(
+            pk=self.id.int,
+            failed=False,
+            started=False,
+        ).delete()
 
 
 class EagerResult:
