@@ -157,8 +157,7 @@ Instead of the task storing its results and returning that to the caller or trig
 *Scheduling tasks:*
 
 Call a Python script from the Unix crontab. Use Kubernetes CronJobs.
-
-Do that every minute and check conditions in the code: maybe instead of the UTC clock you have to follow the business day calendar or multiple time zones.
+Or build a simple Django command using the nice [schedule library](https://pypi.org/project/schedule/).
 
 *Scaling workers:*
 
