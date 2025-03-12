@@ -50,7 +50,19 @@ class Command(BaseCommand):
             loglevel = getattr(logging, options.get("loglevel") or "INFO")
         except AttributeError:
             loglevel = logging.ERROR
-        logging.getLogger().setLevel(loglevel)
+
+        logger = logging.getLogger()
+        logger.setLevel(loglevel)
+
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            handler.setFormatter(
+                logging.Formatter(
+                    fmt="%(asctime)s %(levelname)s %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S",
+                )
+            )
+            logger.addHandler(handler)
 
         signal.signal(signal.SIGINT, self.stop)
         signal.signal(signal.SIGTERM, self.stop)

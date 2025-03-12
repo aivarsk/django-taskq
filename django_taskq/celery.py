@@ -65,7 +65,7 @@ def _apply_async(
             if getattr(settings, "CELERY_TASK_EAGER_PROPAGATES", False):
                 raise
     else:
-        task = Task(
+        task = Task.objects.create(
             queue=queue,
             func=_funcstr(func),
             args=args,
@@ -73,7 +73,6 @@ def _apply_async(
             execute_at=eta,
             expires_at=expires,
         )
-        task.save()
         return AsyncResult(id=UUID(int=task.pk))
 
 
