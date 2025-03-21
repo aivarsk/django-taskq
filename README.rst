@@ -85,6 +85,8 @@ Retry can't change the args/kwargs. That is not a retry but a new task.
 
 Tasks have no result. If you can wait for the result, you can execute the function directly.
 
+No Redis, Flower, or Django:Celery integrations are needed.
+
 
 Admin page
 ----------
