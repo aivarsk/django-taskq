@@ -62,7 +62,7 @@ To start a worker just running the management command:
    python manage.py taskq -Q default -l DEBUG
 
 
-Tasks also return emulations of ``AyncResult`` and ``EagerResult``. The main motivation is to provide a UUID of the scheduled task and to be able to revoke it before execution.
+Tasks also return emulations of ``AsyncResult`` and ``EagerResult``. The main motivation is to provide a UUID of the scheduled task and to be able to revoke it before execution.
 
 .. code-block:: python
 
@@ -101,7 +101,7 @@ The Django admin page shows tasks in the following groups:
 Internals
 ---------
 
-Adding a new task to the queue creates a new instance of the task model.
+Adding a new task to the queue creates a new task model instance.
 
 Executing a task is a bit more expensive:
 
