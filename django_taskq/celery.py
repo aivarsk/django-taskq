@@ -16,7 +16,10 @@ class AsyncResult:
     id: UUID
 
     def __init__(self, id):
-        self.id = id
+        if isinstance(id, str):
+            self.id = UUID(hex=id)
+        else:
+            self.id = id
 
     def revoke(self):
         Task.objects.filter(
