@@ -46,6 +46,9 @@ class Task(models.Model):
         argsrepr = ", ".join(strargs)
         return f"{self.func}({argsrepr})"
 
+    def __str__(self):
+        return f"{self.repr()}#{self.pk}"
+
     def save(self, *args, **kwargs):
         if len(self.func) > 256:
             raise ValueError("Function name is too long")

@@ -5,7 +5,7 @@ from unittest import TestCase
 from django.test import override_settings
 from django.utils import timezone
 
-from django_taskq.celery import shared_task
+from django_taskq.celery import AsyncResult, shared_task
 from django_taskq.models import Retry, Task
 
 
@@ -100,6 +100,18 @@ class CeleryInterfaceBasicResult(TestCase):
         result = taskfunc.delay(1, 2)
         assert result.id is not None
         result.revoke()
+        assert Task.objects.filter(pk=result.id.int).count() == 0
+
+    def test_shared_task_with_delay_can_be_cancelled_by_uuid(self):
+        result = taskfunc.delay(1, 2)
+        assert result.id is not None
+        AsyncResult(result.id).revoke()
+        assert Task.objects.filter(pk=result.id.int).count() == 0
+
+    def test_shared_task_with_delay_can_be_cancelled_by_string_id(self):
+        result = taskfunc.delay(1, 2)
+        assert result.id is not None
+        AsyncResult(str(result.id)).revoke()
         assert Task.objects.filter(pk=result.id.int).count() == 0
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
