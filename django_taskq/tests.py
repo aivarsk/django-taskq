@@ -146,6 +146,14 @@ class CeleryInterfaceApplyAsync(TestCase):
             eta=timezone.now(), expires=timezone.now() + datetime.timedelta(seconds=60)
         )
 
+    def test_shared_task_apply_async_junk_params(self):
+        taskfunc.apply_async(
+            args=(1, 2), expires=60, ignore_result=True, add_to_parent=False
+        )
+        self._assert_last_task(
+            eta=timezone.now(), expires=timezone.now() + datetime.timedelta(seconds=60)
+        )
+
 
 @shared_task(queue="bar")
 def taskfunc_queue(a, b=None):

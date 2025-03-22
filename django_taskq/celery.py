@@ -52,6 +52,8 @@ def _apply_async(
     eta: datetime.datetime | None = None,
     expires: float | datetime.datetime | None = None,
     queue: str | None = None,
+    ignore_result: bool | None = None,
+    add_to_parent: bool | None = None,
 ):
     if countdown:
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
