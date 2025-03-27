@@ -229,6 +229,16 @@ class CeleryInterfaceAutoretry(TestCase):
         task_with_raise.delay(KeyError)
         self._assert_task_raises(KeyError)
 
+    def test_fail_traceback_is_set(self):
+        task_with_raise.delay(KeyError)
+        task = Task.objects.last()
+        try:
+            task.execute()
+        except Exception as exc:
+            task.fail(exc)
+        self.assertIn("KeyError", task.traceback)
+        self.assertEqual("KeyError", task.error)
+
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     def test_failing_with_exception_eager(self):
         task_with_raise.delay(KeyError)

@@ -40,6 +40,11 @@ class Task(models.Model):
     started = models.BooleanField(default=False, editable=False)
     failed = models.BooleanField(default=False, editable=False)
 
+    @property
+    def error(self):
+        if self.traceback:
+            return self.traceback.split("\n")[-1]
+
     def repr(self):
         strargs = [str(arg) for arg in self.args]
         strargs += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
@@ -67,7 +72,7 @@ class Task(models.Model):
     def fail(self, exc):
         self.started = False
         self.failed = True
-        self.traceback = traceback.format_exception(exc)
+        self.traceback = "".join(traceback.format_exception(exc)).strip()
         self.save(update_fields=["started", "failed", "traceback"])
 
     def retry(self, retry_info: Retry):
@@ -83,7 +88,7 @@ class Task(models.Model):
         self.started = False
         self.failed = False
         if retry_info.exc:
-            self.traceback = traceback.format_exception(retry_info.exc)
+            self.traceback = "".join(traceback.format_exception(retry_info.exc)).strip()
         else:
             self.traceback = None
         self.execute_at = retry_info.execute_at

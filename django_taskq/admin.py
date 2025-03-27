@@ -12,7 +12,16 @@ from django_taskq.models import (
 
 @admin.register(PendingTask, ActiveTask, FutureTask)
 class PendingTaskAdmin(admin.ModelAdmin):
-    list_display = ("id", "execute_at", "queue", "func", "args", "kwargs", "retries")
+    list_display = (
+        "id",
+        "execute_at",
+        "queue",
+        "func",
+        "args",
+        "kwargs",
+        "retries",
+        "error",
+    )
     list_filter = (
         "queue",
         "func",
