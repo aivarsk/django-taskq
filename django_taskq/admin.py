@@ -28,6 +28,7 @@ class PendingTaskAdmin(admin.ModelAdmin):
         ("execute_at", admin.DateFieldListFilter),
         ("created_at", admin.DateFieldListFilter),
         ("expires_at", admin.DateFieldListFilter),
+        ("alive_at", admin.DateFieldListFilter),
     )
     readonly_fields = [
         field.name
@@ -41,9 +42,6 @@ class PendingTaskAdmin(admin.ModelAdmin):
 
 @admin.register(DirtyTask, FailedTask)
 class RestartableTaskAdmin(PendingTaskAdmin):
-    list_filter = PendingTaskAdmin.list_filter + (
-        ("alive_at", admin.DateFieldListFilter),
-    )
     actions = ("force_retry",)
 
     @admin.action(description="Retry selected tasks")
