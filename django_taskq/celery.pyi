@@ -1,12 +1,23 @@
 import datetime
+from uuid import UUID
 from typing import Any, Callable, Generic, ParamSpec, TypeVar, overload
-
-from django_taskq.celery import AsyncResult, EagerResult
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
+class AsyncResult:
+    id: UUID
+    result: Any
+    def __init__(self, id: str | UUID): ...
+    def revoke(self): ...
+
+class EagerResult:
+    id: UUID
+    result: Any
+    def revoke(self): ...
+
 class _shared_task(Generic[_P, _R]):
+    name: str
     @staticmethod
     def delay(*args: _P.args, **kwargs: _P.kwargs) -> AsyncResult | EagerResult: ...
     @staticmethod
@@ -19,6 +30,8 @@ class _shared_task(Generic[_P, _R]):
         countdown: float | None = ...,
         expires: float | datetime.datetime | None = ...,
         queue: str | None = ...,
+        ignore_result: bool | None = ...,
+        add_to_parent: bool | None = ...,
     ) -> AsyncResult | EagerResult: ...
     @staticmethod
     def retry(

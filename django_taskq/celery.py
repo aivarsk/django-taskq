@@ -14,6 +14,7 @@ __all__ = ["shared_task", "Retry", "AsyncResult", "EagerResult"]
 
 class AsyncResult:
     id: UUID
+    result = None
 
     def __init__(self, id):
         if isinstance(id, str):
@@ -37,6 +38,9 @@ class EagerResult:
         self.id = uuid4()
         self.result = result
 
+    def revoke(self):
+        pass
+
 
 def _funcstr(func: Callable):
     module = inspect.getmodule(func)
@@ -55,6 +59,10 @@ def _apply_async(
     ignore_result: bool | None = None,
     add_to_parent: bool | None = None,
 ):
+    # nop
+    ignore_result = ignore_result
+    add_to_parent = add_to_parent
+
     if countdown:
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
     if expires and isinstance(expires, (int, float)):

@@ -232,6 +232,7 @@ class CeleryInterfaceAutoretry(TestCase):
     def test_fail_traceback_is_set(self):
         task_with_raise.delay(KeyError)
         task = Task.objects.last()
+        assert task != None
         try:
             task.execute()
         except Exception as exc:
