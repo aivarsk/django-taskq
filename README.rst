@@ -94,7 +94,7 @@ Admin page
 The Django admin page shows tasks in the following groups:
 
 - Failed tasks -- Tasks that failed after retries and countdowns. You should inspect them and remove them by hand or with a script. You can execute them again as well.
-- Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed processes or crashing machines. Review then and either delete or execute again.
+- Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed processes or crashing machines. Review them and either delete or execute again.
 - Active tasks -- Tasks being executed right now. You might catch some longer-running tasks here
 - Pending tasks -- Tasks that should be executed now but are not due to lack of available workers. You might start some extra ones to catch up.
 - Future tasks -- Tasks scheduled to be executed in the future.
@@ -143,11 +143,17 @@ Within the task do this:
 2. Check that all conditions still apply
 3. Perform the action
 
-
 *Task priorities:*
 
 There are no priorities. If you need priority or slow background tasks, just add them to another queue. Start as many processors for the queues as you want.
 Some of them might be idle but it's under your control unlike trying to come up with a proper algorithm that prioritizes tasks and avoids starvation.
+
+*Non-concurrent tasks:*
+
+You have two options:
+
+- Either synchronize on some database record by taking a lock and enforce it explicitly
+- Or keep a dedicated queue with a single worker and have it implicitly
 
 *Storing results:*
 
