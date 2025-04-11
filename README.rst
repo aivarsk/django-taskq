@@ -75,6 +75,22 @@ Tasks also return emulations of ``AsyncResult`` and ``EagerResult``. The main mo
    ...
    AsyncResult(id=retrieve_task_id()).revoke()
 
+
+It obeys also some of the Celery configuration parameters. ``CELERY_TASK_ALWAYS_EAGER`` in your Django settings will cause the task to be executed immediately and it might be useful in tests:
+
+.. code-block:: python
+
+  CELERY_TASK_ALWAYS_EAGER = True
+
+
+And ``CELERY_TASK_EAGER_PROPAGATES`` will cause exceptions for eagerly executed tasks to be raised which is another feature often used in tests:
+
+.. code-block:: python
+
+  CELERY_TASK_EAGER_PROPAGATES = True
+
+
+
 NOT Celery API
 --------------
 
