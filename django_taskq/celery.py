@@ -1,7 +1,6 @@
 import datetime
 import inspect
 from functools import wraps
-from typing import Callable
 from uuid import UUID, uuid4
 
 from django.conf import settings
@@ -42,22 +41,22 @@ class EagerResult:
         pass
 
 
-def _funcstr(func: Callable):
+def _funcstr(func):
     module = inspect.getmodule(func)
     assert module != None
     return ".".join((module.__name__, func.__name__))
 
 
 def _apply_async(
-    func: Callable,
-    args: tuple | None = None,
-    kwargs: dict | None = None,
-    countdown: float | None = None,
-    eta: datetime.datetime | None = None,
-    expires: float | datetime.datetime | None = None,
-    queue: str | None = None,
-    ignore_result: bool | None = None,
-    add_to_parent: bool | None = None,
+    func,
+    args=None,
+    kwargs=None,
+    countdown=None,
+    eta=None,
+    expires=None,
+    queue=None,
+    ignore_result=None,
+    add_to_parent=None,
 ):
     # nop
     ignore_result = ignore_result
@@ -107,19 +106,23 @@ class Signature:
         _apply_async(self.func, self.args, self.kwargs, **(self.options | kwargs))
 
 
-def _retry(exc=None, eta=None, countdown=None, max_retries=None):
+def _retry(exc=None, eta=None, countdown=None, max_retries=None, backoff=False):
     if not eta:
         if countdown is None:
             countdown = 3 * 60
+        if backoff:
+            if isinstance(backoff, bool):
+                backoff = 2
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
     raise Retry(exc=exc, execute_at=eta, max_retries=max_retries)
 
 
 def _maybe_wrap_autoretry(
-    func: Callable,
+    func,
     autoretry_for=(),
     dont_autoretry_for=(),
     retry_kwargs={},
+    retry_backoff=False,
     default_retry_delay=3 * 60,
 ):
     if autoretry_for:
@@ -137,6 +140,7 @@ def _maybe_wrap_autoretry(
                     exc=exc,
                     countdown=retry_kwargs.get("countdown", default_retry_delay),
                     max_retries=retry_kwargs.get("max_retries", 3),
+                    backoff=retry_backoff,
                 )
 
         return run

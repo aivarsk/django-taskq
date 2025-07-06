@@ -1,0 +1,66 @@
+{% extends "admin/change_list.html" %}
+
+{% block content_title %}
+    <h1> Task Summary </h1>
+{% endblock %}
+
+{% block result_list %}
+<div class="results">
+    <table>
+    <thead>
+      <tr>
+        <th>
+          <div class="text">
+            <a href="#">Function</a>
+          </div>
+        </th>
+        <th>
+          <div class="text">
+            <strong>
+              <a href="#">Failed</a>
+            </strong>
+          </div>
+        </th>
+        <th>
+          <div class="text">
+            <a href="#">Dirty</a>
+          </div>
+        </th>
+        <th>
+          <div class="text">
+            <a href="#">Active</a>
+          </div>
+        </th>
+        <th>
+          <div class="text">
+            <strong>
+              <a href="#">Pending</a>
+            </strong>
+          </div>
+        </th>
+        <th>
+          <div class="text">
+            <a href="#">Future</a>
+          </div>
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for row in summary %}
+      <tr class="{% cycle 'row1' 'row2' %}">
+        <td> {{ row.func }} </td>
+        <td><strong>{{ row.failed_count | default:0 }}</strong></td>
+        <td> {{ row.dirty_count | default:0 }} </td>
+        <td> {{ row.active_count | default:0 }} </td>
+        <td><strong>{{ row.pending_count | default:0 }}</strong></td>
+        <td> {{ row.future_count | default:0 }} </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+</div>
+{% endblock %}
+
+{% block pagination %}{% endblock %}

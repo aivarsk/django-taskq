@@ -4,6 +4,7 @@ Django Task Queue
 A short, simple, boring, and reliable Celery replacement for my Django projects.
 
 * ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.
+* Retry support built-in (Celery-style)
 * Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more ``transaction.on_commit``.
 * Django Admin integration to view future and failed tasks and to restart or delete the failed ones.
 * Tasks produce no result. When your task produces a valuable result, store it in your models.
@@ -43,7 +44,7 @@ The main API is the Celery API (``shared_task``) with ``delay``, ``apply_async``
   
   from django_taskq.celery import shared_task
 
-  @shared_task(autoretry_for(MyException,), retry_kwargs={"max_retries": 10, "countdown": 5})
+  @shared_task(autoretry_for=(MyException,), retry_kwargs={"max_retries": 10, "countdown": 5})
   def my_task(foo, bar=None):
       ...
 
@@ -119,20 +120,20 @@ The Django admin page shows tasks in the following groups:
 Internals
 ---------
 
-Adding a new task to the queue creates a new task model instance.
+Adding a new task to the queue creates a new task model instance. When there is an active transaction, the task creation is atomic with the rest of the model updates: either all of that is persisted or none.
 
 Executing a task is a bit more expensive:
 
-1. A task is picked up from a queue and the state is updated to "started" within a single transaction.
+1. A task is picked up from a queue and the state is updated to "started" within a single transaction. Think of it as taking a lease.
 2. Python code is executed, and a background thread updates the "alive at" field every second ("a liveness probe").
 3. Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).
 
 This is a bit more expensive than necessary but:
 
-* we can recognize running tasks - the task is "started" and the record is updated in the last few seconds.
-* we can recognize "dirty" tasks that got killed or lost database connection in the middle - the task is "started" and the record has not been updated for a while.
+* we can recognize running tasks - the task is "started" and the record is updated in the last few seconds. There is no need to guess the right lease timeout ahead of time.
+* we can recognize "dirty" tasks that got killed or lost database connection in the middle without reaching a final state - the task is "started" and the record has not been updated for a while.
 
-In an ideal world, tasks should be idempotent but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
+In an ideal world, tasks should be idempotent and it would be safe to retry "dirty" tasks automatically but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.
 
 
 Performance

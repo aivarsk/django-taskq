@@ -1,6 +1,6 @@
 import datetime
-from uuid import UUID
 from typing import Any, Callable, Generic, ParamSpec, TypeVar, overload
+from uuid import UUID
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
@@ -50,5 +50,6 @@ def shared_task(
     autoretry_for: tuple[type[BaseException], ...] = ...,
     dont_autoretry_for: tuple[type[BaseException], ...] = ...,
     retry_kwargs: dict[str, Any] = ...,
+    retry_backoff: bool | float = False,
     default_retry_delay: float | None = ...,
 ) -> Callable[[Callable[_P, _R]], _shared_task[_P, _R]]: ...

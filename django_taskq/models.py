@@ -13,12 +13,14 @@ class Retry(Exception):
     exc = None
     execute_at = None
     max_retries = None
+    backoff = None
 
-    def __init__(self, exc=None, execute_at=None, max_retries=None):
+    def __init__(self, exc=None, execute_at=None, max_retries=None, backoff: float = 0):
         super().__init__()
         self.exc = exc
         self.execute_at = execute_at
         self.max_retries = max_retries
+        self.backoff = backoff
 
 
 class Task(models.Model):
@@ -45,11 +47,13 @@ class Task(models.Model):
         if self.traceback:
             return self.traceback.split("\n")[-1]
 
+    def arguments(self):
+        arguments = [str(arg) for arg in self.args]
+        arguments += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
+        return ", ".join(arguments)
+
     def repr(self):
-        strargs = [str(arg) for arg in self.args]
-        strargs += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
-        argsrepr = ", ".join(strargs)
-        return f"{self.func}({argsrepr})"
+        return f"{self.func}({self.arguments()})"
 
     def __str__(self):
         return f"{self.repr()}#{self.pk}"
@@ -91,7 +95,13 @@ class Task(models.Model):
             self.traceback = "".join(traceback.format_exception(retry_info.exc)).strip()
         else:
             self.traceback = None
-        self.execute_at = retry_info.execute_at
+
+        if retry_info.backoff:
+            self.execute_at = timezone.now() + datetime.timedelta(
+                seconds=self.retries * retry_info.backoff
+            )
+        else:
+            self.execute_at = retry_info.execute_at
         self.save(
             update_fields=["started", "failed", "traceback", "retries", "execute_at"]
         )
@@ -148,85 +158,66 @@ class Task(models.Model):
         ]
 
 
-class PendingTaskManager(models.Manager):
+class TaskManager(models.Manager):
+    def __init__(self, filter):
+        super().__init__()
+        self._filter = filter
+
     def get_queryset(self):
-        return (
-            super()
-            .get_queryset()
-            .filter(failed=False, started=False, execute_at__lte=timezone.now())
-            .order_by("execute_at")
-        )
+        return super().get_queryset().filter(self._filter()).order_by("execute_at")
 
 
 class PendingTask(Task):
-    objects = PendingTaskManager()
+    objects = TaskManager(
+        lambda: models.Q(failed=False, started=False, execute_at__lte=timezone.now())
+    )
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
-
-
-class FutureTaskManager(models.Manager):
-    def get_queryset(self):
-        return (
-            super()
-            .get_queryset()
-            .filter(failed=False, started=False, execute_at__gt=timezone.now())
-            .order_by("execute_at")
-        )
 
 
 class FutureTask(Task):
-    objects = FutureTaskManager()
+    objects = TaskManager(
+        lambda: models.Q(failed=False, started=False, execute_at__gt=timezone.now())
+    )
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
-
-
-class ActiveTaskManager(models.Manager):
-    def get_queryset(self):
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                started=True,
-                alive_at__gt=timezone.now() - datetime.timedelta(seconds=3),
-            )
-        )
 
 
 class ActiveTask(Task):
-    objects = ActiveTaskManager()
+    objects = TaskManager(
+        lambda: models.Q(
+            started=True,
+            alive_at__gt=timezone.now() - datetime.timedelta(seconds=3),
+        )
+    )
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
-
-
-class DirtyTaskManager(models.Manager):
-    def get_queryset(self):
-        return (
-            super()
-            .get_queryset()
-            .filter(
-                started=True,
-                alive_at__lte=timezone.now() - datetime.timedelta(seconds=3),
-            )
-        )
 
 
 class DirtyTask(Task):
-    objects = DirtyTaskManager()
+    objects = TaskManager(
+        lambda: models.Q(
+            started=True,
+            alive_at__lte=timezone.now() - datetime.timedelta(seconds=3),
+        )
+    )
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
-
-
-class FailedTaskManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(failed=True)
 
 
 class FailedTask(Task):
-    objects = FailedTaskManager()
+    objects = TaskManager(lambda: models.Q(failed=True))
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         proxy = True
+
+
+class TaskSummary(Task):
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]:
+        proxy = True
+        verbose_name = "Task Summary"
+        verbose_name_plural = "Task Summary"

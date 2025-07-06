@@ -15,7 +15,7 @@ services:
   django:
     build: .
     ports:
-      - "127.0.0.1:8888:8000"
+      - "127.0.0.1:9876:8000"
     volumes:
       - .:/app:z
     environment:
