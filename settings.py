@@ -4,7 +4,6 @@ from django.apps import apps
 from django.contrib import admin
 from django.urls import path
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
