@@ -4,8 +4,15 @@ from django.http import HttpResponseRedirect
 from django.urls import re_path, reverse
 from django.utils.html import format_html
 
-from .models import (ActiveTask, DirtyTask, FailedTask, FutureTask,
-                     PendingTask, Task, TaskSummary)
+from .models import (
+    ActiveTask,
+    DirtyTask,
+    FailedTask,
+    FutureTask,
+    PendingTask,
+    Task,
+    TaskSummary,
+)
 
 
 @admin.register(TaskSummary)
@@ -109,12 +116,7 @@ class RestartableTaskAdmin(PendingTaskAdmin):
         )
 
     def retry_one(self, request, task_id, *args, **kwargs):
-        Task.objects.get(pk=task_id).force_retry()
-        self.message_user(
-            request,
-            f"1 task will be retried",
-            messages.SUCCESS,
-        )
+        self.force_retry(request, Task.objects.filter(pk=task_id))
         return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/"))
 
     def get_urls(self):
