@@ -7,6 +7,8 @@ from django.core.management.base import BaseCommand
 
 from django_taskq.models import Retry, Task
 
+logger = logging.getLogger(__name__)
+
 
 class Heartbeat(threading.Thread):
     def __init__(self, command):
@@ -95,9 +97,12 @@ class Command(BaseCommand):
             task.delete()
         except Retry as retry:
             self.stdout.write(self.style.ERROR(f"Failed Task({task.pk}), will retry"))
+            if retry.exc:
+                logging.error(f"Failed Task({task.pk}), will retry", exc_info=retry.exc)
             task.retry(retry)
         except Exception as exc:
             self.stdout.write(self.style.ERROR(f"Failed Task({task.pk}): {exc!r}"))
+            logging.exception(f"Failed Task({task.pk}), give up")
             task.fail(exc)
         finally:
             self.task_id = None
