@@ -4,15 +4,8 @@ from django.http import HttpResponseRedirect
 from django.urls import re_path, reverse
 from django.utils.html import format_html
 
-from .models import (
-    ActiveTask,
-    DirtyTask,
-    FailedTask,
-    FutureTask,
-    PendingTask,
-    Task,
-    TaskSummary,
-)
+from .models import (ActiveTask, DirtyTask, FailedTask, FutureTask,
+                     PendingTask, Task, TaskSummary)
 
 
 @admin.register(TaskSummary)

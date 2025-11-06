@@ -153,7 +153,9 @@ def shared_task(*args, **kwargs):
         def run(func):
             queue = options.pop("queue", None)
             func.name = _funcstr(func)
-            func.delay = lambda *args, **kwargs: _apply_async(func, args, kwargs)
+            func.delay = lambda *args, **kwargs: _apply_async(
+                func, args, kwargs, **(dict(queue=queue))
+            )
             func.apply_async = lambda *args, **kwargs: _apply_async(
                 func, *args, **(dict(queue=queue) | kwargs)
             )

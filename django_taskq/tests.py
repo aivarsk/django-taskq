@@ -186,12 +186,28 @@ class CeleryInterfaceQueue(TestCase):
         taskfunc.apply_async(args=(1, 2), queue="foo")
         self._assert_last_task(queue="foo")
 
+    def test_shared_task_queue_delay(self):
+        taskfunc_queue.delay(1, 2)
+        self._assert_last_task(queue="bar")
+
+    def test_shared_task_queue_delay_kwargs(self):
+        taskfunc_queue.delay(1, b=2)
+        self._assert_last_task(queue="bar")
+
     def test_shared_task_queue_apply_async(self):
         taskfunc_queue.apply_async(args=(1, 2))
         self._assert_last_task(queue="bar")
 
+    def test_shared_task_queue_apply_async_kwargs(self):
+        taskfunc_queue.apply_async(args=(1,), kwargs={"b": 2})
+        self._assert_last_task(queue="bar")
+
     def test_shared_task_queue_apply_async_queue(self):
         taskfunc_queue.apply_async(args=(1, 2), queue="foo")
+        self._assert_last_task(queue="foo")
+
+    def test_shared_task_queue_apply_async_queue_kwargs(self):
+        taskfunc_queue.apply_async(args=(1,), kwargs={"b": 2}, queue="foo")
         self._assert_last_task(queue="foo")
 
     def test_shared_task_queue_s_apply_async(self):
