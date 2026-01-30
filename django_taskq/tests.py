@@ -388,3 +388,38 @@ class RetryExecution(TestCase):
         self._test_a_retry(Retry(execute_at=timezone.now()), 1)
         self._test_a_retry(Retry(execute_at=timezone.now()), 2)
         self._test_a_retry(Retry(execute_at=timezone.now()), 3)
+
+
+@shared_task(
+    autoretry_for=(ValueError,),
+    retry_backoff=True,
+    retry_backoff_max=9,
+    retry_jitter=False,
+    retry_kwargs={"max_retries": 8},
+)
+def task_with_retry_backoff():
+    raise ValueError
+
+
+class RetryBackoffExecution(TestCase):
+    def _test_a_retry(self, retries, execute_at):
+        task = Task.objects.last()
+        assert task is not None
+        try:
+            task.execute()
+            assert False, "Exception should be raised"
+        except Retry as retry:
+            task.retry(retry)
+        task.refresh_from_db()
+        self.assertEqual(task.retries, retries)
+        self.assertAlmostEqual(
+            task.execute_at, execute_at, delta=datetime.timedelta(seconds=1)
+        )
+
+    def test_with_exp_backoff_and_max(self):
+        task_with_retry_backoff.delay()
+        self._test_a_retry(1, timezone.now() + datetime.timedelta(seconds=1))
+        self._test_a_retry(2, timezone.now() + datetime.timedelta(seconds=2))
+        self._test_a_retry(3, timezone.now() + datetime.timedelta(seconds=4))
+        self._test_a_retry(4, timezone.now() + datetime.timedelta(seconds=8))
+        self._test_a_retry(5, timezone.now() + datetime.timedelta(seconds=9))

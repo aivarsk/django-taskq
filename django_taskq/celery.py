@@ -1,5 +1,6 @@
 import datetime
 import inspect
+import random
 from functools import wraps
 from uuid import UUID, uuid4
 
@@ -106,15 +107,31 @@ class Signature:
         _apply_async(self.func, self.args, self.kwargs, **(self.options | kwargs))
 
 
-def _retry(exc=None, eta=None, countdown=None, max_retries=None, backoff=False):
+def _retry(
+    exc=None,
+    eta=None,
+    countdown=None,
+    max_retries=None,
+    retry_backoff=False,
+    retry_backoff_max=600,
+    retry_jitter=True,
+):
     if not eta:
         if countdown is None:
             countdown = 3 * 60
-        if backoff:
-            if isinstance(backoff, bool):
-                backoff = 2
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
-    raise Retry(exc=exc, execute_at=eta, max_retries=max_retries)
+
+    if retry_backoff and isinstance(retry_backoff, bool):
+        retry_backoff = 2
+
+    raise Retry(
+        exc=exc,
+        execute_at=eta,
+        max_retries=max_retries,
+        backoff=retry_backoff,
+        backoff_max=retry_backoff_max,
+        jitter=retry_jitter,
+    )
 
 
 def _maybe_wrap_autoretry(
@@ -123,6 +140,8 @@ def _maybe_wrap_autoretry(
     dont_autoretry_for=(),
     retry_kwargs={},
     retry_backoff=False,
+    retry_backoff_max=600,
+    retry_jitter=True,
     default_retry_delay=3 * 60,
 ):
     if autoretry_for:
@@ -140,7 +159,9 @@ def _maybe_wrap_autoretry(
                     exc=exc,
                     countdown=retry_kwargs.get("countdown", default_retry_delay),
                     max_retries=retry_kwargs.get("max_retries", 3),
-                    backoff=retry_backoff,
+                    retry_backoff=retry_backoff,
+                    retry_backoff_max=retry_backoff_max,
+                    retry_jitter=retry_jitter,
                 )
 
         return run

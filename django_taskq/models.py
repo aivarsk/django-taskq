@@ -1,5 +1,7 @@
 import datetime
+import random
 import traceback
+from dataclasses import dataclass
 
 from django.db import models, transaction
 from django.utils import timezone
@@ -9,18 +11,14 @@ from picklefield.fields import PickledObjectField
 class MaxRetriesExceededError(Exception): ...
 
 
+@dataclass
 class Retry(Exception):
-    exc = None
-    execute_at = None
-    max_retries = None
-    backoff = None
-
-    def __init__(self, exc=None, execute_at=None, max_retries=None, backoff: float = 0):
-        super().__init__()
-        self.exc = exc
-        self.execute_at = execute_at
-        self.max_retries = max_retries
-        self.backoff = backoff
+    exc: BaseException | None = None
+    execute_at: datetime.datetime | None = None
+    max_retries: int | None = None
+    backoff: int = 0
+    backoff_max: int | None = None
+    jitter: bool = False
 
 
 class Task(models.Model):
@@ -97,9 +95,12 @@ class Task(models.Model):
             self.traceback = None
 
         if retry_info.backoff:
-            self.execute_at = timezone.now() + datetime.timedelta(
-                seconds=self.retries * retry_info.backoff
-            )
+            countdown = pow(retry_info.backoff, self.retries - 1)
+            if retry_info.jitter:
+                countdown = random.randint(0, countdown)
+            countdown = min(countdown, retry_info.backoff_max)
+
+            self.execute_at = timezone.now() + datetime.timedelta(seconds=countdown)
         else:
             self.execute_at = retry_info.execute_at
         self.save(
