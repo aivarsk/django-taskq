@@ -103,14 +103,14 @@ class Signature:
 def _retry(
     exc=None,
     eta=None,
-    countdown=3 * 60,
-    max_retries=None,
+    countdown=None,
+    max_retries=3,
     retry_backoff=False,
     retry_backoff_max=600,
     retry_jitter=True,
+    default_retry_delay=3 * 60,
 ):
-    if countdown is None:
-        countdown = 3 * 60
+    countdown = countdown or default_retry_delay
     if not eta:
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
 
@@ -132,10 +132,7 @@ def _maybe_wrap_autoretry(
     autoretry_for=(),
     dont_autoretry_for=(),
     retry_kwargs={},
-    retry_backoff=False,
-    retry_backoff_max=600,
-    retry_jitter=True,
-    default_retry_delay=3 * 60,
+    **options,
 ):
     if autoretry_for:
 
@@ -150,11 +147,8 @@ def _maybe_wrap_autoretry(
             except autoretry_for as exc:
                 _retry(
                     exc=exc,
-                    countdown=retry_kwargs.get("countdown", default_retry_delay),
-                    max_retries=retry_kwargs.get("max_retries", 3),
-                    retry_backoff=retry_backoff,
-                    retry_backoff_max=retry_backoff_max,
-                    retry_jitter=retry_jitter,
+                    **retry_kwargs,
+                    **options,
                 )
 
         return run

@@ -318,14 +318,14 @@ class CeleryInterfaceManualRetry(TestCase):
         task_self_retry.delay()
         self._assert_task_retries(
             execute_at=timezone.now() + datetime.timedelta(seconds=3 * 60),
-            max_retries=None,
+            max_retries=3,
         )
 
     def test_failing_with_exception_with_autoretry_indirect(self):
         task_self_retry_indirect.delay()
         self._assert_task_retries(
             execute_at=timezone.now() + datetime.timedelta(seconds=3 * 60),
-            max_retries=None,
+            max_retries=3,
         )
 
     def test_failing_with_exception_with_autoretry_eta(self):
@@ -333,14 +333,14 @@ class CeleryInterfaceManualRetry(TestCase):
         task_self_retry.delay(eta=eta)
         self._assert_task_retries(
             execute_at=eta,
-            max_retries=None,
+            max_retries=3,
         )
 
     def test_failing_with_exception_with_autoretry_countdown(self):
         task_self_retry.delay(countdown=60)
         self._assert_task_retries(
             execute_at=timezone.now() + datetime.timedelta(seconds=60),
-            max_retries=None,
+            max_retries=3,
         )
 
 
