@@ -12,14 +12,8 @@ __all__ = ["shared_task", "Retry", "AsyncResult", "EagerResult"]
 
 
 class AsyncResult:
-    id: UUID
-    result = None
-
     def __init__(self, id, result=None):
-        if isinstance(id, str):
-            self.id = UUID(hex=id)
-        else:
-            self.id = id
+        self.id = UUID(hex=id) if isinstance(id, str) else id
         self.result = result
 
     def revoke(self):

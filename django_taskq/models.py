@@ -46,9 +46,10 @@ class Task(models.Model):
             return self.traceback.split("\n")[-1]
 
     def arguments(self):
-        arguments = [str(arg) for arg in self.args]
-        arguments += [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
-        return ", ".join(arguments)
+        return ", ".join(
+            [str(arg) for arg in self.args]
+            + [str(key) + "=" + str(value) for key, value in self.kwargs.items()]
+        )
 
     def repr(self):
         return f"{self.func}({self.arguments()})"
@@ -87,10 +88,11 @@ class Task(models.Model):
 
         self.started = False
         self.failed = False
-        if retry_info.exc:
-            self.traceback = "".join(traceback.format_exception(retry_info.exc)).strip()
-        else:
-            self.traceback = None
+        self.traceback = (
+            "".join(traceback.format_exception(retry_info.exc)).strip()
+            if retry_info.exc
+            else None
+        )
 
         if retry_info.backoff:
             countdown = pow(retry_info.backoff, self.retries - 1)
@@ -133,16 +135,18 @@ class Task(models.Model):
                     taskqs = taskqs.filter(queue=queue)
 
                 task = taskqs.order_by("execute_at").first()
-                if not task:
-                    return task
 
+                if not task:
+                    return None
+                # Expired tasks
                 if task.expires_at and task.expires_at <= timezone.now():
                     task.delete()
-                else:
-                    task.started = True
-                    task.alive_at = timezone.now()
-                    task.save(update_fields=["started", "alive_at"])
-                    return task
+                    return None
+
+                task.started = True
+                task.alive_at = timezone.now()
+                task.save(update_fields=["started", "alive_at"])
+                return task
 
     @classmethod
     def alive(cls, task_id):

@@ -8,7 +8,6 @@ _R = TypeVar("_R")
 class AsyncResult:
     id: UUID
     result: Any
-    def __init__(self, id: str | UUID, result: Any | None = None): ...
     def revoke(self) -> None: ...
 
 class EagerResult(AsyncResult): ...
@@ -47,8 +46,8 @@ def shared_task(
     autoretry_for: tuple[type[BaseException], ...] = ...,
     dont_autoretry_for: tuple[type[BaseException], ...] = ...,
     retry_kwargs: dict[str, Any] = ...,
-    retry_backoff: bool | float = False,
-    retry_backoff_max: int = 600,
-    retry_jitter: bool = True,
+    retry_backoff: bool | float = ...,
+    retry_backoff_max: int = ...,
+    retry_jitter: bool = ...,
     default_retry_delay: float | None = ...,
 ) -> Callable[[Callable[_P, _R]], _shared_task[_P, _R]]: ...
