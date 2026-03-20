@@ -57,18 +57,16 @@ class Task(models.Model):
         return f"{self.repr()}#{self.pk}"
 
     def save(self, *args, **kwargs):
-        if len(self.func) > 256:
-            raise ValueError("Function name is too long")
-
         self.args = self.args or ()
         self.kwargs = self.kwargs or {}
-
         self.queue = self.queue or self.DEFAULTQ
+        self.execute_at = self.execute_at or timezone.now()
+
+        if len(self.func) > 256:
+            raise ValueError("Function name is too long")
         if len(self.queue) > 64:
             raise ValueError("Queue name is too long")
 
-        if not self.execute_at:
-            self.execute_at = timezone.now()
         super().save(*args, **kwargs)
 
     def fail(self, exc):
@@ -103,6 +101,7 @@ class Task(models.Model):
             self.execute_at = timezone.now() + datetime.timedelta(seconds=countdown)
         else:
             self.execute_at = retry_info.execute_at
+
         self.save(
             update_fields=["started", "failed", "traceback", "retries", "execute_at"]
         )

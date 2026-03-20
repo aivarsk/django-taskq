@@ -1,6 +1,5 @@
 import datetime
 import inspect
-import random
 from functools import wraps
 from uuid import UUID, uuid4
 
@@ -16,11 +15,12 @@ class AsyncResult:
     id: UUID
     result = None
 
-    def __init__(self, id):
+    def __init__(self, id, result=None):
         if isinstance(id, str):
             self.id = UUID(hex=id)
         else:
             self.id = id
+        self.result = result
 
     def revoke(self):
         Task.objects.filter(
@@ -30,14 +30,7 @@ class AsyncResult:
         ).delete()
 
 
-class EagerResult:
-    id: UUID
-    result = None
-
-    def __init__(self, result):
-        self.id = uuid4()
-        self.result = result
-
+class EagerResult(AsyncResult):
     def revoke(self):
         pass
 
@@ -73,7 +66,7 @@ def _apply_async(
 
     if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
         try:
-            return EagerResult(result=func(*args, **kwargs))
+            return EagerResult(uuid4(), result=func(*args, **kwargs))
         except:
             if getattr(settings, "CELERY_TASK_EAGER_PROPAGATES", False):
                 raise
@@ -110,15 +103,15 @@ class Signature:
 def _retry(
     exc=None,
     eta=None,
-    countdown=None,
+    countdown=3 * 60,
     max_retries=None,
     retry_backoff=False,
     retry_backoff_max=600,
     retry_jitter=True,
 ):
+    if countdown is None:
+        countdown = 3 * 60
     if not eta:
-        if countdown is None:
-            countdown = 3 * 60
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
 
     if retry_backoff and isinstance(retry_backoff, bool):
