@@ -120,6 +120,12 @@ class CeleryInterfaceBasicResult(TestCase):
         assert result.id is not None
         assert result.result == 42
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_shared_task_apply_async_kwargs_returns_eager_result(self):
+        result = taskfunc.apply_async(kwargs={"a": 1, "b": 2})
+        assert result.id is not None
+        assert result.result == 42
+
 
 class CeleryInterfaceApplyAsync(TestCase):
     def _assert_last_task(self, eta, expires):

@@ -42,6 +42,9 @@ def _apply_async(
     ignore_result = ignore_result
     add_to_parent = add_to_parent
 
+    args = args or ()
+    kwargs = kwargs or {}
+
     if countdown:
         eta = timezone.now() + datetime.timedelta(seconds=int(countdown))
     if expires and isinstance(expires, (int, float)):
