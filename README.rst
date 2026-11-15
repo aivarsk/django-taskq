@@ -20,6 +20,8 @@ What it is not:
 - A replacement for Celery at scale
 - A system for non-Django projects
 
+Fundamentals:
+
 * ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.
 * Retry support built-in (Celery-style)
 * Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more ``transaction.on_commit``.
