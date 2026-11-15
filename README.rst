@@ -3,11 +3,29 @@ Django Task Queue
 
 A short, simple, boring, and reliable Celery replacement for my Django projects.
 
+I think this is just part of the Celery experience: every sufficiently frustrated user eventually writes their own task queue. This one is mine.
+
+What it is:
+
+- A way to run Django functions in the background
+- A database-backed job queue (no broker)
+- A system that uses your existing models for state and results
+- A single dependency: Django
+
+What it is not:
+
+- A distributed computing framework
+- An RPC system
+- A workflow engine
+- A replacement for Celery at scale
+- A system for non-Django projects
+
 * ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.
 * Retry support built-in (Celery-style)
 * Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more ``transaction.on_commit``.
 * Django Admin integration to view future and failed tasks and to restart or delete the failed ones.
 * Tasks produce no result. When your task produces a valuable result, store it in your models.
+* The Django 6.0 ``django.tasks`` API implemented on the same engine, for when the standardized API is preferred over the Celery one.
 
 Installation
 ------------
@@ -15,11 +33,11 @@ Installation
 Install the package:
 
 .. code-block:: bash
-  
+
   python -m pip install django-taskq
 
 
-And add the ``django_taskq`` to the ``INSTALLED_APPS``:
+And add ``django_taskq`` to the ``INSTALLED_APPS``:
 
 .. code-block:: python
 
@@ -31,17 +49,17 @@ And add the ``django_taskq`` to the ``INSTALLED_APPS``:
 Run the migrations to create the database tables and indexes:
 
 .. code-block:: bash
-  
+
   python manage.py migrate
 
 
 Celery API
 ----------
 
-The main API is the Celery API (``shared_task``) with ``delay``, ``apply_async`` and ``s``. Just to make switching between implementations easier.
+The original API is the Celery-style ``shared_task`` with ``delay``, ``apply_async`` and ``s``. Just to make switching between implementations easier.
 
 .. code-block:: python
-  
+
   from django_taskq.celery import shared_task
 
   @shared_task(autoretry_for=(MyException,), retry_kwargs={"max_retries": 10, "countdown": 5})
@@ -49,13 +67,13 @@ The main API is the Celery API (``shared_task``) with ``delay``, ``apply_async``
       ...
 
 .. code-block:: python
-  
-  my_task.delay(1,bar=2)
-  my_task.appy_async((1,2))
-  my_task.s(1,2).apply_async()
+
+  my_task.delay(1, bar=2)
+  my_task.apply_async((1, 2))
+  my_task.s(1, 2).apply_async()
 
 
-To start a worker just running the management command:
+To start a worker, run the management command:
 
 .. code-block:: bash
 
@@ -67,17 +85,17 @@ Tasks also return emulations of ``AsyncResult`` and ``EagerResult``. The main mo
 
 .. code-block:: python
 
-   result = my_task.s(1,2).apply_async(countdown=60)
+   result = my_task.s(1, 2).apply_async(countdown=60)
    ...
    result.revoke()
    #
-   result = my_task.s(1,2).apply_async(countdown=60)
+   result = my_task.s(1, 2).apply_async(countdown=60)
    store_task_id(result.id)
    ...
    AsyncResult(id=retrieve_task_id()).revoke()
 
 
-It obeys also some of the Celery configuration parameters. ``CELERY_TASK_ALWAYS_EAGER`` in your Django settings will cause the task to be executed immediately and it might be useful in tests:
+It also obeys some of the Celery configuration parameters. ``CELERY_TASK_ALWAYS_EAGER`` in your Django settings will cause the task to be executed immediately and it might be useful in tests:
 
 .. code-block:: python
 
@@ -90,6 +108,46 @@ And ``CELERY_TASK_EAGER_PROPAGATES`` will cause exceptions for eagerly executed 
 
   CELERY_TASK_EAGER_PROPAGATES = True
 
+
+Django tasks API
+----------------
+
+Django 6.0 ships a standardized background tasks API (``django.tasks``) and it is implemented on the same engine: same table, same worker, same properties. On older Django versions install the ``django-tasks`` backport package, it provides the same namespace.
+
+.. code-block:: python
+
+  from django_taskq.tasks import task
+
+  @task(queue_name="emails")
+  def my_task(foo, bar=None):
+      ...
+
+  result = my_task.enqueue(1, bar=2)
+  result.status  # TaskResultStatus.READY
+
+  # defer
+  my_task.using(run_after=datetime.timedelta(minutes=5)).enqueue(1, bar=2)
+
+To enqueue after the current transaction commits, wrap ``enqueue()`` in ``transaction.on_commit()`` as usual.
+
+Or point the ``TASKS`` setting at the backend and use the stock decorator:
+
+.. code-block:: python
+
+  TASKS = {"default": {"BACKEND": "django_taskq.tasks.DatabaseBackend"}}
+
+  from django.tasks import task
+
+  @task
+  def my_task(foo, bar=None):
+      ...
+
+The differences from the Django contract, kept on purpose:
+
+* Arguments are pickled, not JSON-serialized. Datetimes, model instances, and other picklable objects work.
+* The worker deletes successful tasks so the queue cleans itself. A ``SUCCESSFUL`` status is never stored and ``get_result()`` raises ``TaskResultDoesNotExist`` for finished tasks. Use it to inspect pending, running, and failed tasks.
+* Priorities are accepted and silently ignored, for the reasons explained below.
+* Retries use the ``Retry`` exception or ``task.retry()`` inside the task.
 
 
 NOT Celery API
@@ -162,8 +220,9 @@ Within the task do this:
 
 *Task priorities:*
 
-There are no priorities. If you need priority or slow background tasks, just add them to another queue. Start as many processors for the queues as you want.
-Some of them might be idle but it's under your control unlike trying to come up with a proper algorithm that prioritizes tasks and avoids starvation.
+There are no priorities. Priority is a capacity problem, not a queue feature: if some work is urgent, give it its own queue and start more workers for it. If we cannot afford the workers, that's a resource problem no priority integer will fix.
+
+So if you need priority or slow background tasks, just add them to another queue. Start as many processors for the queues as you want. Some of them might be idle but it's under your control, unlike trying to come up with a proper algorithm that prioritizes tasks and avoids starvation.
 
 *Non-concurrent tasks:*
 
@@ -174,10 +233,18 @@ You have two options:
 
 *Storing results:*
 
-Instead of the task storing its results and returning that to the caller or triggering another task to process it either:
+The task queue handles execution. The result lives in the database (or S3, or the cache): when the task finishes, it writes there and the caller polls the database, not the queue. This keeps the queue stateless and the data in a system designed for querying.
+
+So instead of the task storing its results and returning that to the caller or triggering another task to process it either:
 
 - Store the result directly in the target application model
 - Call a function or another task to process the result **explicitly**
+
+*Chaining tasks:*
+
+Chaining is workflow orchestration, not a queue feature. The task queue runs individual steps; the workflow state decides which step runs next.
+
+Keep a state machine in the database. Each task checks the state, does its work, and updates the state. The next task is triggered by the state change, not by the previous task. The steps stay decoupled, each one can be retried on its own, and the workflow state can be inspected with the same tools as the rest of the data.
 
 *Scheduling tasks:*
 
@@ -190,7 +257,16 @@ Start multiple Docker containers, and start multiple Kubernetes pods/scale deplo
 
 *Boosting performance:*
 
-Instead of executing thousands of tasks (function calls with specific arguments) consider recording thousands of events (domain-specific model) and executing a task once in a while that processes all available events in bulk.
+If you think you need to process 10,000 tasks per second, you probably need batching, streaming, or aggregation, not a faster task queue. 10,000 individual tasks per second is usually a design mistake, not a scalability requirement.
 
-Or do not record any events, just schedule a task that queries models matching certain criteria and does processing for all of them.
+The patterns for high-volume work:
 
+- Batching: collect 10,000 events and process them as a single task
+- Streaming: read from a log or a queue continuously and process in chunks
+- Aggregation: reduce events to a summary and act on the summary
+
+None of these require a queue that handles 10,000 individual jobs. They require a consumer that reads efficiently and processes in bulk. So instead of executing thousands of tasks (function calls with specific arguments) consider recording thousands of events (a domain-specific model) and executing a task once in a while that processes all available events in bulk.
+
+Or do not record any events at all. Schedule a task that queries models matching certain criteria and does the processing for all of them.
+
+Celery scales to 10,000 tasks per second. django-taskq doesn't, because 10,000 individual tasks per second is usually a mistake. Batch them.

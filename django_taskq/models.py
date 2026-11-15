@@ -120,7 +120,10 @@ class Task(models.Model):
         func = self.func[last_dot + 1 :]
 
         f = getattr(__import__(mod, fromlist=(func,)), func)
-        f(*self.args, **self.kwargs)
+        if getattr(f, "_taskq_database_task", False):
+            f._taskq_execute(self)
+        else:
+            f(*self.args, **self.kwargs)
 
     @classmethod
     def next_task(cls, queue=None):

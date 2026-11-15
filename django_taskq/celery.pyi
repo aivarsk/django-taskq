@@ -12,6 +12,17 @@ class AsyncResult:
 
 class EagerResult(AsyncResult): ...
 
+def _retry(
+    exc: BaseException | None = ...,
+    eta: datetime.datetime | None = ...,
+    countdown: float | None = ...,
+    max_retries: int | None = ...,
+    retry_backoff: bool | float = ...,
+    retry_backoff_max: int | None = ...,
+    retry_jitter: bool | None = ...,
+    default_retry_delay: float | None = ...,
+) -> None: ...
+
 class _shared_task(Generic[_P, _R]):
     name: str
     @staticmethod
