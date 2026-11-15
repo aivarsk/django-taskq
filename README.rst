@@ -197,7 +197,7 @@ In an ideal world, tasks should be idempotent and it would be safe to retry "dir
 Performance
 -----------
 
-A single process can execute around 150 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness, and observability are more important.
+A single process can execute over 200 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness, and observability are more important.
 On the other hand, to handle more "tasks" you probably want to store many events not tasks, and have a single task that processes them in batches.
 
 Known issues
