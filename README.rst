@@ -5,6 +5,8 @@ A short, simple, boring, and reliable Celery replacement for my Django projects.
 
 I think this is just part of the Celery experience: every sufficiently frustrated user eventually writes their own task queue. This one is mine.
 
+Documentation: https://aivarsk.com/django-taskq/
+
 What it is:
 
 - A way to run Django functions in the background

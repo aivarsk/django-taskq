@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aivarsk.com/django-taskq/sitemap.xml

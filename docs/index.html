@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>django-taskq: a boring, reliable task queue for Django</title>
+<meta name="description" content="Database-backed task queue for Django with the Celery API and the Django 6.0 tasks API. No broker, no Redis, transactional enqueue, built-in retries, Django admin integration. A short, simple, boring, and reliable Celery replacement.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://aivarsk.com/django-taskq/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232f7d4f'/%3E%3Crect x='3' y='3.5' width='10' height='2' rx='1' fill='white'/%3E%3Crect x='3' y='7' width='10' height='2' rx='1' fill='white'/%3E%3Crect x='3' y='10.5' width='6' height='2' rx='1' fill='white'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="django-taskq">
+<meta property="og:title" content="django-taskq: a boring, reliable task queue for Django">
+<meta property="og:description" content="Database-backed task queue for Django with the Celery API and the Django 6.0 tasks API. No broker, no Redis, transactional enqueue, built-in retries, Django admin integration. A short, simple, boring, and reliable Celery replacement.">
+<meta property="og:url" content="https://aivarsk.com/django-taskq/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="django-taskq: a boring, reliable task queue for Django">
+<meta name="twitter:description" content="Database-backed task queue for Django with the Celery API and the Django 6.0 tasks API. No broker, no Redis, transactional enqueue, built-in retries, Django admin integration. A short, simple, boring, and reliable Celery replacement.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "django-taskq",
+  "description": "Database-backed task queue for Django with the Celery API and the Django 6.0 tasks API. No broker, no Redis, transactional enqueue, built-in retries, Django admin integration. A short, simple, boring, and reliable Celery replacement.",
+  "url": "https://aivarsk.com/django-taskq/",
+  "codeRepository": "https://github.com/aivarsk/django-taskq",
+  "programmingLanguage": "Python",
+  "runtimePlatform": "Django",
+  "license": "https://opensource.org/licenses/MIT",
+  "author": {"@type": "Person", "name": "Aivars Kalvans", "url": "https://aivarsk.com/"},
+  "softwareVersion": "1.1.1",
+  "keywords": "django, task queue, celery alternative, background tasks, django tasks, job queue"
+}
+</script>
+<style>
+:root {
+  --bg: #ffffff;
+  --panel: #f6f8f6;
+  --ink: #1f2a24;
+  --ink-dim: #5a6a60;
+  --accent: #2f7d4f;
+  --accent-dark: #256640;
+  --line: #dde5de;
+  --code-bg: #20262b;
+  --code-ink: #e8efe9;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px;
+  flex: 0 0 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: 1.5rem 1rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar .brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--accent-dark);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 1rem;
+}
+.sidebar nav a {
+  display: block;
+  padding: 0.28rem 0.6rem;
+  border-radius: 6px;
+  color: var(--ink-dim);
+  text-decoration: none;
+  font-size: 0.93rem;
+}
+.sidebar nav a:hover { background: var(--line); color: var(--ink); }
+.sidebar nav a.active { background: var(--accent); color: #fff; }
+.sidebar .meta { margin-top: 1.5rem; font-size: 0.85rem; color: var(--ink-dim); }
+.sidebar .meta a { color: var(--accent-dark); }
+.content {
+  flex: 1;
+  max-width: 780px;
+  padding: 2.5rem 3rem 6rem;
+}
+section { margin-bottom: 3.5rem; }
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+.tagline { color: var(--ink-dim); font-size: 1.1rem; margin-top: 0; }
+h2 {
+  font-size: 1.45rem;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.3rem;
+  margin: 0 0 1rem;
+}
+h3 { font-size: 1.08rem; margin: 1.6rem 0 0.4rem; }
+a { color: var(--accent-dark); }
+code {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+ul, ol { padding-left: 1.4rem; }
+li { margin: 0.3rem 0; }
+.note {
+  border-left: 4px solid var(--accent);
+  background: var(--panel);
+  padding: 0.8rem 1rem;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+footer {
+  border-top: 1px solid var(--line);
+  margin-top: 2rem;
+  padding-top: 1rem;
+  color: var(--ink-dim);
+  font-size: 0.9rem;
+}
+#menu-toggle {
+  display: none;
+  position: fixed;
+  top: 0.8rem;
+  left: 0.8rem;
+  z-index: 20;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.95rem;
+}
+.tok-comment { color: #7a8a80; font-style: italic; }
+.tok-string { color: #a9d18b; }
+.tok-kw { color: #7fc8a9; }
+.tok-num { color: #e0b36a; }
+.tok-decorator { color: #c9a0dc; }
+.tok-flag { color: #e0b36a; }
+.tok-exe { color: #7fc8a9; }
+.tok-section { color: #7fc8a9; }
+.tok-path { color: #a9d18b; }
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    z-index: 10;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    width: 260px;
+    flex-basis: 260px;
+  }
+  .sidebar.open { transform: translateX(0); }
+  #menu-toggle { display: block; }
+  .content { padding: 4rem 1.2rem 4rem; max-width: none; }
+}
+</style>
+</head>
+<body>
+
+<button id="menu-toggle" aria-label="Menu">Contents</button>
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="#overview">django-taskq</a>
+  <nav id="nav">
+<a href="#overview">Overview</a>
+<a href="#installation">Installation</a>
+<a href="#celery-api">Celery API</a>
+<a href="#django-tasks-api">Django tasks API</a>
+<a href="#worker">Running the worker</a>
+<a href="#what-it-is-not">NOT Celery API</a>
+<a href="#admin">Admin page</a>
+<a href="#internals">Internals</a>
+<a href="#performance">Performance</a>
+<a href="#recipes">Recipes</a>
+  </nav>
+  <div class="meta">
+    <a href="https://github.com/aivarsk/django-taskq">GitHub</a> ·
+    <a href="https://pypi.org/project/django-taskq/">PyPI</a><br>
+    MIT license, by <a href="https://aivarsk.com/">Aivars Kalvans</a>
+  </div>
+</aside>
+<main class="content">
+<h1>django-taskq</h1>
+<p class="tagline">A short, simple, boring, and reliable Celery replacement for Django.</p>
+<section id="overview">
+<h2>Overview</h2>
+<p>A short, simple, boring, and reliable Celery replacement for my Django projects.</p>
+<p>I think this is just part of the Celery experience: every sufficiently frustrated user eventually writes their own task queue. This one is mine.</p>
+<h3>What it is</h3>
+<ul><li>A way to run Django functions in the background</li><li>A database-backed job queue (no broker)</li><li>A system that uses your existing models for state and results</li><li>A single dependency: Django</li></ul>
+<h3>What it is not</h3>
+<ul><li>A distributed computing framework</li><li>An RPC system</li><li>A workflow engine</li><li>A replacement for Celery at scale</li><li>A system for non-Django projects</li></ul>
+<h3>Fundamentals</h3>
+<ul><li>ETA (estimated time of arrival) is a fundamental feature and does not require caching tasks in memory or moving to a different queue.</li><li>Retry support built-in (Celery-style)</li><li>Database is the only backend. Successful tasks are removed from the database, the failed ones are kept for manual inspection. Tasks obey the same transaction rules as the rest of your models. No more <code>transaction.on_commit</code>.</li><li>Django Admin integration to view future and failed tasks and to restart or delete the failed ones.</li><li>Tasks produce no result. When your task produces a valuable result, store it in your models.</li><li>The Django 6.0 <code>django.tasks</code> API implemented on the same engine, for when the standardized API is preferred over the Celery one.</li></ul>
+</section>
+<section id="installation">
+<h2>Installation</h2>
+<pre><code class="language-bash"><span class="tok-exe">python</span> <span class="tok-flag">-m</span> pip install django-taskq</code></pre>
+<p>Add <code>django_taskq</code> to <code>INSTALLED_APPS</code> and run the migrations:</p>
+<pre><code class="language-python">INSTALLED_APPS = [
+    <span class="tok-comment"># ...</span>
+    <span class="tok-string">&quot;django_taskq&quot;</span>,
+]</code></pre>
+<pre><code class="language-bash"><span class="tok-exe">python</span> manage.py migrate</code></pre>
+<p>Django 4.0 or newer. For the Django tasks API on older Django, install the <code>django-tasks</code> backport package, it provides the same <code>django.tasks</code> namespace.</p>
+</section>
+<section id="celery-api">
+<h2>Celery API</h2>
+<p>The original API is the Celery-style <code>shared_task</code> with <code>delay</code>, <code>apply_async</code> and <code>s</code>. Just to make switching between implementations easier.</p>
+<pre><code class="language-python"><span class="tok-kw">from</span> django_taskq.celery <span class="tok-kw">import</span> shared_task
+
+<span class="tok-decorator">@shared_task</span>(autoretry_for=(MyException,), retry_kwargs={<span class="tok-string">&quot;max_retries&quot;</span>: <span class="tok-num">10</span>, <span class="tok-string">&quot;countdown&quot;</span>: <span class="tok-num">5</span>})
+<span class="tok-kw">def</span> my_task(foo, bar=<span class="tok-kw">None</span>):
+    ...</code></pre>
+<pre><code class="language-python">my_task.delay(<span class="tok-num">1</span>, bar=<span class="tok-num">2</span>)
+my_task.apply_async((<span class="tok-num">1</span>, <span class="tok-num">2</span>))
+my_task.s(<span class="tok-num">1</span>, <span class="tok-num">2</span>).apply_async()</code></pre>
+<p>Tasks return emulations of <code>AsyncResult</code> and <code>EagerResult</code>. The main motivation is to provide a UUID of the scheduled task and to be able to revoke it before execution.</p>
+<pre><code class="language-python">result = my_task.s(<span class="tok-num">1</span>, <span class="tok-num">2</span>).apply_async(countdown=<span class="tok-num">60</span>)
+...
+result.revoke()
+<span class="tok-comment">#</span>
+result = my_task.s(<span class="tok-num">1</span>, <span class="tok-num">2</span>).apply_async(countdown=<span class="tok-num">60</span>)
+store_task_id(result.id)
+...
+AsyncResult(id=retrieve_task_id()).revoke()</code></pre>
+<p>It also obeys some of the Celery configuration parameters, useful in tests:</p>
+<pre><code class="language-python">CELERY_TASK_ALWAYS_EAGER = <span class="tok-kw">True</span>      <span class="tok-comment"># execute tasks immediately</span>
+CELERY_TASK_EAGER_PROPAGATES = <span class="tok-kw">True</span>  <span class="tok-comment"># raise exceptions from eager tasks</span></code></pre>
+</section>
+<section id="django-tasks-api">
+<h2>Django tasks API</h2>
+<p>Django 6.0 ships a standardized background tasks API (<code>django.tasks</code>) and it is implemented on the same engine: same table, same worker, same properties.</p>
+<pre><code class="language-python"><span class="tok-kw">from</span> django_taskq.tasks <span class="tok-kw">import</span> task
+
+<span class="tok-decorator">@task</span>(queue_name=<span class="tok-string">&quot;emails&quot;</span>)
+<span class="tok-kw">def</span> my_task(foo, bar=<span class="tok-kw">None</span>):
+    ...
+
+result = my_task.enqueue(<span class="tok-num">1</span>, bar=<span class="tok-num">2</span>)
+result.status  <span class="tok-comment"># TaskResultStatus.READY</span>
+
+<span class="tok-comment"># defer</span>
+my_task.using(run_after=datetime.timedelta(minutes=<span class="tok-num">5</span>)).enqueue(<span class="tok-num">1</span>, bar=<span class="tok-num">2</span>)</code></pre>
+<p>To enqueue after the current transaction commits, wrap <code>enqueue()</code> in <code>transaction.on_commit()</code> as usual. Or point the <code>TASKS</code> setting at the backend and use the stock decorator:</p>
+<pre><code class="language-ini">TASKS = {<span class="tok-str">&quot;default&quot;</span>: {<span class="tok-str">&quot;BACKEND&quot;</span>: <span class="tok-str">&quot;django_taskq.tasks.DatabaseBackend&quot;</span>}}</code></pre>
+<pre><code class="language-python"><span class="tok-kw">from</span> django.tasks <span class="tok-kw">import</span> task
+
+<span class="tok-decorator">@task</span>
+<span class="tok-kw">def</span> my_task(foo, bar=<span class="tok-kw">None</span>):
+    ...</code></pre>
+<h3>Differences from the Django contract, kept on purpose</h3>
+<ul><li>Arguments are pickled, not JSON-serialized. Datetimes, model instances, and other picklable objects work.</li><li>The worker deletes successful tasks so the queue cleans itself. A <code>SUCCESSFUL</code> status is never stored and <code>get_result()</code> raises <code>TaskResultDoesNotExist</code> for finished tasks. Use it to inspect pending, running, and failed tasks.</li><li>Priorities are accepted and silently ignored, for the reasons explained in the recipes.</li><li>Retries use the <code>Retry</code> exception or <code>task.retry()</code> inside the task.</li></ul>
+</section>
+<section id="worker">
+<h2>Running the worker</h2>
+<p>One management command per queue:</p>
+<pre><code class="language-bash"><span class="tok-exe">python</span> manage.py taskq
+<span class="tok-exe">python</span> manage.py taskq <span class="tok-flag">-Q</span> default <span class="tok-flag">-l</span> DEBUG</code></pre>
+<p>Start as many workers as you want. See the scaling recipe below.</p>
+</section>
+<section id="what-it-is-not">
+<h2>NOT Celery API</h2>
+<p>This task queue is unintrusive, all you get is the execution of a function. How you organize the code after that is up to you. There are no Celery bound tasks and task inheritance, naming, task requests, special logging, etc. You get the idea.</p>
+<ul><li>Retry can&#x27;t change the args/kwargs. That is not a retry but a new task.</li><li>Tasks have no result. If you can wait for the result, you can execute the function directly.</li><li>No Redis, Flower, or Django:Celery integrations are needed.</li></ul>
+</section>
+<section id="admin">
+<h2>Admin page</h2>
+<p>The Django admin page shows tasks in the following groups:</p>
+<ul><li>Failed tasks -- Tasks that failed after retries and countdowns. You should inspect them and remove them by hand or with a script. You can execute them again as well.</li><li>Dirty tasks -- Tasks that got started but failed without reaching a final state due to killed processes or crashing machines. Review them and either delete or execute again.</li><li>Active tasks -- Tasks being executed right now. You might catch some longer-running tasks here.</li><li>Pending tasks -- Tasks that should be executed now but are not due to lack of available workers. You might start some extra ones to catch up.</li><li>Future tasks -- Tasks scheduled to be executed in the future.</li></ul>
+</section>
+<section id="internals">
+<h2>Internals</h2>
+<p>Adding a new task to the queue creates a new task model instance. When there is an active transaction, the task creation is atomic with the rest of the model updates: either all of that is persisted or none.</p>
+<p>Executing a task is a bit more expensive:</p>
+<ol><li>A task is picked up from a queue and the state is updated to &quot;started&quot; within a single transaction. Think of it as taking a lease.</li><li>Python code is executed, and a background thread updates the &quot;alive at&quot; field every second (&quot;a liveness probe&quot;).</li><li>Successful tasks are deleted from the table. Failed tasks are marked as such and retried (based on configuration).</li></ol>
+<p>This is a bit more expensive than necessary but we can recognize running tasks (&quot;started&quot; and the record updated in the last few seconds, no need to guess the right lease timeout ahead of time) and &quot;dirty&quot; tasks that got killed or lost the database connection in the middle (&quot;started&quot; and the record not updated for a while).</p>
+<p>In an ideal world, tasks should be idempotent and it would be safe to retry &quot;dirty&quot; tasks automatically but things happen and I prefer to know which tasks crashed and double-check if some cleanup is necessary.</p>
+</section>
+<section id="performance">
+<h2>Performance</h2>
+<p>A single process can execute over 200 dummy tasks per second which is more than enough. After years of struggling with Celery, correctness, and observability are more important.</p>
+<p>On the other hand, to handle more &quot;tasks&quot; you probably want to store many events not tasks, and have a single task that processes them in batches. See the boosting performance recipe.</p>
+</section>
+<section id="recipes">
+<h2>Recipes</h2>
+<h3>Exactly once, at most once, at least once, idempotency</h3>
+<p>Implementing these semantics presents too many design questions to answer on the task level. Instead, treat the tasks as function calls that are decoupled in time. We do not enforce these semantics on functions, we write code inside functions to perform the necessary checks. Within the task do this:</p>
+<ol><li>Lock the application model</li><li>Check that all conditions still apply</li><li>Perform the action</li></ol>
+<h3>Task priorities</h3>
+<p>There are no priorities. Priority is a capacity problem, not a queue feature: if some work is urgent, give it its own queue and start more workers for it. If we cannot afford the workers, that&#x27;s a resource problem no priority integer will fix.</p>
+<p>So if you need priority or slow background tasks, just add them to another queue. Start as many processors for the queues as you want. Some of them might be idle but it&#x27;s under your control, unlike trying to come up with a proper algorithm that prioritizes tasks and avoids starvation.</p>
+<h3>Non-concurrent tasks</h3>
+<ul><li>Either synchronize on some database record by taking a lock and enforce it explicitly</li><li>Or keep a dedicated queue with a single worker and have it implicitly</li></ul>
+<h3>Storing results</h3>
+<p>The task queue handles execution. The result lives in the database (or S3, or the cache): when the task finishes, it writes there and the caller polls the database, not the queue. This keeps the queue stateless and the data in a system designed for querying.</p>
+<p>So instead of the task storing its results and returning that to the caller or triggering another task to process it either:</p>
+<ul><li>Store the result directly in the target application model</li><li>Call a function or another task to process the result explicitly</li></ul>
+<h3>Chaining tasks</h3>
+<p>Chaining is workflow orchestration, not a queue feature. The task queue runs individual steps; the workflow state decides which step runs next.</p>
+<p>Keep a state machine in the database. Each task checks the state, does its work, and updates the state. The next task is triggered by the state change, not by the previous task. The steps stay decoupled, each one can be retried on its own, and the workflow state can be inspected with the same tools as the rest of the data.</p>
+<h3>Scheduling tasks</h3>
+<p>Call a Python script from the Unix crontab. Use Kubernetes CronJobs. Or build a simple Django command using the nice schedule library.</p>
+<h3>Scaling workers</h3>
+<p>Start multiple Docker containers, and start multiple Kubernetes pods/scale deployment. Or use something like <code>supervisord</code> to start multiple processes.</p>
+<h3>Boosting performance</h3>
+<p>If you think you need to process 10,000 tasks per second, you probably need batching, streaming, or aggregation, not a faster task queue. 10,000 individual tasks per second is usually a design mistake, not a scalability requirement.</p>
+<p>The patterns for high-volume work:</p>
+<ul><li>Batching: collect 10,000 events and process them as a single task</li><li>Streaming: read from a log or a queue continuously and process in chunks</li><li>Aggregation: reduce events to a summary and act on the summary</li></ul>
+<p>None of these require a queue that handles 10,000 individual jobs. They require a consumer that reads efficiently and processes in bulk. So instead of executing thousands of tasks (function calls with specific arguments) consider recording thousands of events (a domain-specific model) and executing a task once in a while that processes all available events in bulk. Or do not record any events at all. Schedule a task that queries models matching certain criteria and does the processing for all of them.</p>
+<p class="note">Celery scales to 10,000 tasks per second. django-taskq doesn&#x27;t, because 10,000 individual tasks per second is usually a mistake. Batch them.</p>
+</section>
+<section id="links">
+<h2>Links</h2>
+<ul>
+  <li>Source code and issues: <a href="https://github.com/aivarsk/django-taskq">github.com/aivarsk/django-taskq</a></li>
+  <li>Releases: <a href="https://pypi.org/project/django-taskq/">pypi.org/project/django-taskq</a></li>
+</ul>
+<footer>
+  django-taskq is MIT licensed. Every sufficiently frustrated Celery user eventually writes their own task queue. This one is mine.
+</footer>
+</section>
+</main>
+</div>
+<script>
+(function () {
+  var toggle = document.getElementById("menu-toggle");
+  var sidebar = document.getElementById("sidebar");
+  toggle.addEventListener("click", function () {
+    sidebar.classList.toggle("open");
+  });
+  var links = document.querySelectorAll("#nav a");
+  links.forEach(function (a) {
+    a.addEventListener("click", function () { sidebar.classList.remove("open"); });
+  });
+  var sections = Array.from(document.querySelectorAll("section"));
+  var byId = {};
+  links.forEach(function (a) { byId[a.getAttribute("href").slice(1)] = a; });
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        links.forEach(function (a) { a.classList.remove("active"); });
+        var link = byId[entry.target.id];
+        if (link) link.classList.add("active");
+      }
+    });
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  sections.forEach(function (s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
